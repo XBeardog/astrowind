@@ -9,3 +9,6 @@ dist/
 .vscode/
 pnpm-lock.yaml
 .astro
+
+# 项目背景文档（仅本地参考，不进仓库）
+查看项目背景与提交Git.md

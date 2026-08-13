@@ -1,8 +1,8 @@
 name: Deploy Factory Site
 
 on:
-  push:
-    branches: [main]
+  # 改为手动触发，避免和 Cloudflare Pages 直连 Git 自动构建冲突
+  workflow_dispatch:
 
 jobs:
   deploy-website:
