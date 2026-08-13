@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>询盘留言管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    if (!Auth.requireAuth()) throw new Error('Unauthorized');
+    const root = App.initLayout('inquiries');
+    const STATUS = { new: ['新询盘', 'bg-red-100 text-red-700'], replied: ['已回复', 'bg-green-100 text-green-700'], closed: ['已关闭', 'bg-gray-100 text-gray-600'] };
+    let curStatus = '';
+
+    function openDetail(id) {
+      API.inquiries.get(id).then(r => {
+        const i = r.data;
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4';
+        modal.innerHTML = `
+          <div class="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="p-5 border-b flex justify-between items-center">
+              <h3 class="font-semibold">询盘 #${i.id} — ${i.created_at}</h3>
+              <button data-close class="text-gray-400 hover:text-gray-700 text-xl">&times;</button>
+            </div>
+            <div class="p-5 space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div><div class="text-xs text-gray-500">姓名</div><div class="font-medium">${i.name || '—'}</div></div>
+                <div><div class="text-xs text-gray-500">公司</div><div>${i.company || '—'}</div></div>
+                <div><div class="text-xs text-gray-500">邮箱</div><div>${i.email ? `<a href="mailto:${i.email}" class="text-blue-600">${i.email}</a>` : '—'}</div></div>
+                <div><div class="text-xs text-gray-500">电话</div><div>${i.phone ? `<a href="tel:${i.phone}" class="text-blue-600">${i.phone}</a>` : '—'}</div></div>
+                <div><div class="text-xs text-gray-500">国家/地区</div><div>${i.country || '—'}</div></div>
+                <div><div class="text-xs text-gray-500">关联产品 ID</div><div>${i.product_id || '—'}</div></div>
+              </div>
+              <div><div class="text-xs text-gray-500 mb-1">客户留言</div>
+                <div class="p-3 bg-gray-50 rounded whitespace-pre-wrap text-sm">${i.message || '（无）'}</div></div>
+              <div class="border-t pt-4">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="font-medium">跟进处理</div>
+                  <span class="text-xs px-2 py-0.5 rounded ${STATUS[i.status]?.[1] || ''}">${STATUS[i.status]?.[0] || i.status}</span>
+                </div>
+                <div class="mb-2"><label class="block text-sm mb-1">状态</label>
+                  <select id="r-status" class="w-full border rounded px-3 py-2">
+                    <option value="new" ${i.status === 'new' ? 'selected' : ''}>新询盘</option>
+                    <option value="replied" ${i.status === 'replied' ? 'selected' : ''}>已回复</option>
+                    <option value="closed" ${i.status === 'closed' ? 'selected' : ''}>已关闭</option>
+                  </select></div>
+                <div><label class="block text-sm mb-1">回复备注（仅管理员可见）</label>
+                  <textarea id="r-note" rows="4" class="w-full border rounded px-3 py-2 text-sm" placeholder="记录客户需求、报价、后续跟进动作...">${i.reply_note || ''}</textarea></div>
+                ${i.replied_at ? `<div class="text-xs text-gray-500 mt-2">上次处理：${i.replied_at}</div>` : ''}
+              </div>
+            </div>
+            <div class="p-5 border-t flex justify-between">
+              <button id="del-btn" class="px-4 py-2 text-red-600 border border-red-200 rounded hover:bg-red-50">删除询盘</button>
+              <div class="flex gap-2">
+                <button data-close class="px-4 py-2 border rounded hover:bg-gray-100">关闭</button>
+                <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">保存处理</button>
+              </div>
+            </div>
+          </div>`;
+        document.body.appendChild(modal);
+        modal.querySelectorAll('[data-close]').forEach(b => b.onclick = () => modal.remove());
+        modal.querySelector('#save-btn').onclick = async () => {
+          try {
+            await API.inquiries.reply(id, {
+              status: modal.querySelector('#r-status').value,
+              reply_note: modal.querySelector('#r-note').value,
+            });
+            App.toast('已保存', 'success');
+            modal.remove();
+            loadList(curStatus);
+          } catch (err) { App.toast(err.message, 'error'); }
+        };
+        modal.querySelector('#del-btn').onclick = async () => {
+          if (!(await App.confirm('确认删除该询盘？此操作不可恢复'))) return;
+          await API.inquiries.delete(id);
+          App.toast('已删除', 'success');
+          modal.remove();
+          loadList(curStatus);
+        };
+      }).catch(err => App.toast(err.message, 'error'));
+    }
+
+    async function loadList(status = '') {
+      curStatus = status;
+      root.innerHTML = `
+        <div class="mb-6 flex justify-between items-center flex-wrap gap-3">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-800">询盘留言</h1>
+            <p class="text-gray-500 mt-1">客户在主站提交的询盘信息会实时出现在这里</p>
+          </div>
+          <div class="flex gap-2">
+            <select id="filter-status" class="border rounded px-3 py-2">
+              <option value="">全部状态</option>
+              <option value="new" ${status === 'new' ? 'selected' : ''}>新询盘</option>
+              <option value="replied" ${status === 'replied' ? 'selected' : ''}>已回复</option>
+              <option value="closed" ${status === 'closed' ? 'selected' : ''}>已关闭</option>
+            </select>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 text-gray-600">
+              <tr>
+                <th class="p-3 text-left">时间</th>
+                <th class="p-3 text-left">姓名 / 公司</th>
+                <th class="p-3 text-left">联系方式</th>
+                <th class="p-3 text-left">留言</th>
+                <th class="p-3 text-left">状态</th>
+                <th class="p-3 text-right w-24">操作</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"><tr><td colspan="6" class="p-8 text-center text-gray-400">加载中...</td></tr></tbody>
+          </table>
+        </div>`;
+      document.getElementById('filter-status').onchange = (e) => loadList(e.target.value);
+      try {
+        const r = await API.inquiries.list(status ? { status } : {});
+        const list = r.data || [];
+        document.getElementById('tbody').innerHTML = list.length ? list.map(i => `
+          <tr class="border-t hover:bg-gray-50 align-top">
+            <td class="p-3 whitespace-nowrap text-xs text-gray-500">${i.created_at}</td>
+            <td class="p-3">
+              <div class="font-medium">${i.name}</div>
+              <div class="text-xs text-gray-500">${i.company || ''}${i.country ? ' · ' + i.country : ''}</div>
+            </td>
+            <td class="p-3 text-xs">
+              ${i.email ? `<div>✉️ ${i.email}</div>` : ''}
+              ${i.phone ? `<div>📞 ${i.phone}</div>` : ''}
+            </td>
+            <td class="p-3 max-w-xs"><div class="line-clamp-2 text-gray-600">${i.message || '—'}</div></td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs ${STATUS[i.status]?.[1] || ''}">${STATUS[i.status]?.[0] || i.status}</span></td>
+            <td class="p-3 text-right"><button data-open="${i.id}" class="text-blue-600 hover:underline">查看</button></td>
+          </tr>`).join('') : '<tr><td colspan="6" class="p-12 text-center text-gray-400">暂无询盘。当客户在主站提交询盘表单后会出现在这里</td></tr>';
+        document.querySelectorAll('[data-open]').forEach(btn => btn.onclick = () => openDetail(Number(btn.dataset.open)));
+      } catch (err) { App.toast(err.message, 'error'); }
+    }
+    loadList();
+  </script>
+</body>
+</html>

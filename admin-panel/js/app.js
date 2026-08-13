@@ -65,15 +65,29 @@ const App = {
           <h1 class="text-xl font-bold">🛠 工厂管理端</h1>
           <p class="text-gray-400 text-sm mt-1">AstroWind Admin</p>
         </div>
-        <nav class="flex-1 p-4 space-y-1">
+        <nav class="flex-1 p-4 space-y-1 text-sm overflow-y-auto">
           <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2 rounded-lg transition ${activePage === 'dashboard' ? 'bg-blue-600' : 'hover:bg-gray-800'}">
             <span>📊</span><span>仪表盘</span>
+          </a>
+          <div class="mt-3 text-gray-500 uppercase text-xs tracking-wider px-3">内容</div>
+          <a href="banners.html" class="flex items-center gap-3 px-3 py-2 rounded-lg transition ${activePage === 'banners' ? 'bg-blue-600' : 'hover:bg-gray-800'}">
+            <span>🖼️</span><span>首页 Banner</span>
+          </a>
+          <a href="categories.html" class="flex items-center gap-3 px-3 py-2 rounded-lg transition ${activePage === 'categories' ? 'bg-blue-600' : 'hover:bg-gray-800'}">
+            <span>🗂️</span><span>产品分类</span>
           </a>
           <a href="products.html" class="flex items-center gap-3 px-3 py-2 rounded-lg transition ${activePage === 'products' ? 'bg-blue-600' : 'hover:bg-gray-800'}">
             <span>📦</span><span>产品管理</span>
           </a>
           <a href="product-form.html" class="flex items-center gap-3 px-3 py-2 rounded-lg transition ${activePage === 'new-product' ? 'bg-blue-600' : 'hover:bg-gray-800'}">
             <span>➕</span><span>新增产品</span>
+          </a>
+          <a href="gallery.html" class="flex items-center gap-3 px-3 py-2 rounded-lg transition ${activePage === 'gallery' ? 'bg-blue-600' : 'hover:bg-gray-800'}">
+            <span>🏭</span><span>工厂实拍</span>
+          </a>
+          <div class="mt-3 text-gray-500 uppercase text-xs tracking-wider px-3">运营</div>
+          <a href="inquiries.html" class="flex items-center gap-3 px-3 py-2 rounded-lg transition ${activePage === 'inquiries' ? 'bg-blue-600' : 'hover:bg-gray-800'}">
+            <span>📨</span><span>询盘留言 <span id="nav-inquiry-count" class="ml-auto bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"></span></span>
           </a>
         </nav>
         <div class="p-4 border-t border-gray-800">

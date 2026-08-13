@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>首页 Banner 管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    if (!Auth.requireAuth()) throw new Error('Unauthorized');
+    const root = App.initLayout('banners');
+
+    function formHTML(item = {}) {
+      return `
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm mb-1">图片 URL <span class="text-red-500">*</span>
+              <span class="text-gray-400 text-xs ml-2">支持 R2 上传或直接填外链</span>
+            </label>
+            <div class="flex gap-2">
+              <input id="f-image_url" value="${item.image_url || ''}" class="flex-1 border rounded px-3 py-2" placeholder="https://.../banner.jpg"/>
+              <label class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded cursor-pointer">
+                上传
+                <input id="f-upload" type="file" accept="image/*" class="hidden"/>
+              </label>
+            </div>
+            ${item.image_url ? `<img src="${item.image_url}" class="mt-2 max-h-40 object-cover rounded border"/>` : ''}
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div><label class="block text-sm mb-1">主标题</label>
+              <input id="f-title" value="${item.title || ''}" class="w-full border rounded px-3 py-2" placeholder="例如：溢隆模具 22 年匠心"/></div>
+            <div><label class="block text-sm mb-1">副标题</label>
+              <input id="f-subtitle" value="${item.subtitle || ''}" class="w-full border rounded px-3 py-2" placeholder="模塑一体化源头工厂"/></div>
+          </div>
+          <div class="grid grid-cols-3 gap-4">
+            <div><label class="block text-sm mb-1">跳转链接</label>
+              <input id="f-link_url" value="${item.link_url || ''}" class="w-full border rounded px-3 py-2" placeholder="/products 或 https://..."/></div>
+            <div><label class="block text-sm mb-1">语言</label>
+              <select id="f-lang" class="w-full border rounded px-3 py-2">
+                <option value="zh" ${item.lang === 'zh' ? 'selected' : ''}>中文</option>
+                <option value="en" ${item.lang === 'en' ? 'selected' : ''}>英文</option>
+                <option value="all" ${item.lang === 'all' ? 'selected' : ''}>全部显示</option>
+              </select></div>
+            <div><label class="block text-sm mb-1">排序（小靠前）</label>
+              <input id="f-sort_order" type="number" value="${item.sort_order ?? 0}" class="w-full border rounded px-3 py-2"/></div>
+          </div>
+          <div class="flex items-center gap-2">
+            <input id="f-is_active" type="checkbox" ${item.is_active !== false ? 'checked' : ''} class="w-4 h-4"/>
+            <label for="f-is_active" class="text-sm">启用（不启用则不会在首页展示）</label>
+          </div>
+        </div>`;
+    }
+
+    function openModal(item) {
+      item = item || {};
+      const isEdit = !!item?.id;
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4';
+      modal.innerHTML = `
+        <div class="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div class="p-5 border-b flex justify-between items-center">
+            <h3 class="font-semibold">${isEdit ? '编辑 Banner' : '新增 Banner'}</h3>
+            <button data-close class="text-gray-400 hover:text-gray-700 text-xl">&times;</button>
+          </div>
+          <div class="p-5" id="modal-body">${formHTML(item)}</div>
+          <div class="p-5 border-t flex justify-end gap-2">
+            <button data-close class="px-4 py-2 border rounded hover:bg-gray-100">取消</button>
+            <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">保存</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+      modal.querySelectorAll('[data-close]').forEach(b => b.onclick = () => modal.remove());
+
+      modal.querySelector('#f-upload').onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          App.toast('上传中...', 'info');
+          const r = await API.upload(file);
+          modal.querySelector('#f-image_url').value = r.data.url;
+          App.toast('上传成功', 'success');
+        } catch (err) {
+          App.toast('上传失败: ' + err.message, 'error');
+        }
+      };
+
+      modal.querySelector('#save-btn').onclick = async () => {
+        const form = {
+          image_url: modal.querySelector('#f-image_url').value.trim(),
+          title: modal.querySelector('#f-title').value.trim() || null,
+          subtitle: modal.querySelector('#f-subtitle').value.trim() || null,
+          link_url: modal.querySelector('#f-link_url').value.trim() || null,
+          lang: modal.querySelector('#f-lang').value,
+          sort_order: Number(modal.querySelector('#f-sort_order').value) || 0,
+          is_active: modal.querySelector('#f-is_active').checked,
+        };
+        if (!form.image_url) return App.toast('图片必填', 'error');
+        try {
+          if (isEdit) await API.banners.update(item.id, form);
+          else await API.banners.create(form);
+          App.toast('已保存', 'success');
+          modal.remove();
+          loadList();
+        } catch (err) { App.toast(err.message, 'error'); }
+      };
+    }
+
+    async function loadList() {
+      root.innerHTML = `
+        <div class="mb-6 flex justify-between items-center">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-800">首页 Banner</h1>
+            <p class="text-gray-500 mt-1">控制首页轮播图展示，支持中英文分开设置</p>
+          </div>
+          <button id="new-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">➕ 新增 Banner</button>
+        </div>
+        <div class="bg-white rounded-xl shadow">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 text-gray-600">
+              <tr><th class="p-3 text-left w-20">排序</th><th class="p-3 text-left">图片</th><th class="p-3 text-left">标题</th><th class="p-3 text-left">语言</th><th class="p-3 text-left">状态</th><th class="p-3 text-right w-40">操作</th></tr>
+            </thead>
+            <tbody id="tbody"><tr><td colspan="6" class="p-8 text-center text-gray-400">加载中...</td></tr></tbody>
+          </table>
+        </div>`;
+      document.getElementById('new-btn').onclick = () => openModal(null);
+
+      try {
+        const r = await API.banners.list();
+        const rows = r.data || [];
+        document.getElementById('tbody').innerHTML = rows.length ? rows.map(b => `
+          <tr class="border-t hover:bg-gray-50">
+            <td class="p-3">${b.sort_order}</td>
+            <td class="p-3"><img src="${b.image_url}" class="w-32 h-16 object-cover rounded border"/></td>
+            <td class="p-3">
+              <div class="font-medium">${b.title || '—'}</div>
+              <div class="text-xs text-gray-500">${b.subtitle || ''}</div>
+              ${b.link_url ? `<div class="text-xs text-blue-600 truncate max-w-xs">🔗 ${b.link_url}</div>` : ''}
+            </td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs ${b.lang === 'zh' ? 'bg-red-50 text-red-600' : b.lang === 'en' ? 'bg-blue-50 text-blue-600' : 'bg-gray-100'}">${b.lang}</span></td>
+            <td class="p-3">${b.is_active ? '<span class="text-green-600">● 启用</span>' : '<span class="text-gray-400">○ 停用</span>'}</td>
+            <td class="p-3 text-right space-x-2">
+              <button data-edit="${b.id}" class="text-blue-600 hover:underline">编辑</button>
+              <button data-del="${b.id}" class="text-red-600 hover:underline">删除</button>
+            </td>
+          </tr>`).join('') : '<tr><td colspan="6" class="p-12 text-center text-gray-400">暂无 Banner，点右上角新增</td></tr>';
+
+        document.querySelectorAll('[data-edit]').forEach(btn => btn.onclick = async () => {
+          const id = Number(btn.dataset.edit);
+          const r = await API.banners.get(id);
+          openModal({ ...r.data, is_active: r.data.is_active === 1 });
+        });
+        document.querySelectorAll('[data-del]').forEach(btn => btn.onclick = async () => {
+          if (!(await App.confirm('确认删除该 Banner？删除后首页不再展示'))) return;
+          await API.banners.delete(Number(btn.dataset.del));
+          App.toast('已删除', 'success');
+          loadList();
+        });
+      } catch (err) { App.toast(err.message, 'error'); }
+    }
+    loadList();
+  </script>
+</body>
+</html>

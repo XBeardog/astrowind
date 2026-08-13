@@ -4,6 +4,7 @@ dist/
 .output/
 .env
 .env.production
+.dev.vars
 .DS_Store
 *.log
 .vscode/

@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { cors } from 'hono/cors';
+import cors from './cors';
 import { productsRoute } from './routes/products';
 import { adminRoute } from './routes/admin';
 import { uploadRoute } from './routes/upload';
@@ -18,31 +18,24 @@ export type Env = {
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use('*', cors({
-  origin: ['http://localhost:5173', 'http://localhost:8788', 'https://astrowind.pages.dev', 'https://astrowind-admin.pages.dev'],
-  credentials: true,
-}));
+app.route('*', cors);
 
-// 公开接口 - 无需认证
-app.route('/api/products', productsRoute);
-app.route('/api/admin', loginRoute);  // login/logout 不需要认证
-
-// 管理端接口 - 需要认证
-app.use('/api/admin/*', auth);
-app.route('/api/admin', adminRoute);
-app.route('/api/admin/upload', uploadRoute);
+// 公开接口（不需要认证）
+app.route('/api/products', productsRoute);       // 产品/分类/Banner/相册/询盘提交
+app.route('/api/admin', loginRoute);            // /login /logout（注意只处理这两个路径，不挂其他 admin 路由）
 
 // 健康检查
 app.get('/api/health', (c) => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// 404
-app.notFound((c) => {
-  return c.json({ error: 'Not Found' }, 404);
-});
+// 管理端接口（需要认证）
+app.use('/api/admin/*', auth);
+app.route('/api/admin', adminRoute);            // /api/admin/products, /categories, /banners, /gallery, /inquiries, /stats
+app.route('/api/admin/upload', uploadRoute);    // /api/admin/upload
 
-// 错误处理
+// 404
+app.notFound((c) => c.json({ error: 'Not Found' }, 404));
 app.onError((err, c) => {
   console.error(err);
   return c.json({ error: err.message || 'Internal Server Error' }, 500);

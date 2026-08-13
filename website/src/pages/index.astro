@@ -2,6 +2,7 @@
 import Layout from '~/layouts/PageLayout.astro';
 
 import Hero from '~/components/widgets/Hero.astro';
+import HeroSlider from '~/components/widgets/HeroSlider.astro';
 import FactoryIntro from '~/components/widgets/FactoryIntro.astro';
 import Content from '~/components/widgets/Content.astro';
 import CallToAction from '~/components/widgets/CallToAction.astro';
@@ -11,6 +12,7 @@ import {
   COMPANY_FOUNDATION_YEAR,
   INJECTION_BUSINESS_START_YEAR,
 } from '~/utils/utils';
+import { publicApi } from '~/lib/api';
 
 const moldYears = getMoldYears();
 const injectionYears = getInjectionYears();
@@ -27,6 +29,26 @@ const metadata = {
   title: '东莞市溢隆模具有限公司 — 模塑一体化源头工厂',
   ignoreTitleTemplate: true,
 };
+
+// SSR 阶段拉 Banner，失败兜底
+let SSR_BANNERS: any[] = [];
+try {
+  const r = await publicApi.bannersList('zh').catch(() => ({ data: [] }) as any);
+  SSR_BANNERS = Array.isArray(r.data) ? r.data : [];
+} catch {}
+
+const fallbackHeroSlides = [
+  {
+    title: `深耕模具制造${moldYears}年`,
+    subtitle: '集模具设计制造、注塑成型于一体，自有独立模房，绝大部分工序自主完成',
+    image: 'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?w=1920&h=1080&fit=crop',
+    alt: '溢隆模具',
+    actions: [
+      { variant: 'primary', text: '查看产品中心', href: '/products', icon: 'tabler:arrow-right' },
+      { variant: 'secondary', text: '走进工厂', href: '/factory', icon: 'tabler:building-factory' },
+    ],
+  },
+];
 ---
 
 <Layout metadata={metadata}>
@@ -34,17 +56,39 @@ const metadata = {
     document.body.setAttribute('data-i18n-vars', JSON.stringify(i18nVars));
   </script>
 
-  <Hero
-    tagline="YLG MOLD · 模塑一体化源头工厂"
-    title={`深耕模具制造${moldYears}年`}
-    subtitle="集模具设计制造、注塑成型于一体，自有独立模房，绝大部分工序自主完成，产品远销美国、俄罗斯等海外地区"
-    compact
-    i18n={{
-      tagline: 'index.hero.tagline',
-      title: 'index.hero.title',
-      subtitle: 'index.hero.subtitle',
-    }}
-  />
+  <!-- 首页顶部：优先用 DB 的 banners，没数据走 Hero 静态文案 -->
+  <div id="hero-slot">
+    {SSR_BANNERS.length > 0 ? (
+      <HeroSlider
+        slides={SSR_BANNERS.map((b) => ({
+          title: b.title || '',
+          subtitle: b.subtitle || '',
+          image: b.image_url,
+          alt: b.title || 'Banner',
+          actions: b.link_url
+            ? [{ variant: 'primary', text: '了解更多', href: b.link_url } as any]
+            : undefined,
+        }))}
+        interval={5000}
+      />
+    ) : (
+      <Hero
+        tagline="YLG MOLD · 模塑一体化源头工厂"
+        title={`深耕模具制造${moldYears}年`}
+        subtitle="集模具设计制造、注塑成型于一体，自有独立模房，绝大部分工序自主完成，产品远销美国、俄罗斯等海外地区"
+        compact
+        i18n={{
+          tagline: 'index.hero.tagline',
+          title: 'index.hero.title',
+          subtitle: 'index.hero.subtitle',
+        }}
+        actions={[
+          { variant: 'primary', text: '查看产品中心', href: '/products', icon: 'tabler:arrow-right' },
+          { variant: 'secondary', text: '走进工厂', href: '/factory', icon: 'tabler:building-factory' },
+        ]}
+      />
+    )}
+  </div>
 
   <FactoryIntro
     id="about"
@@ -53,12 +97,6 @@ const metadata = {
     description={`我司${COMPANY_FOUNDATION_YEAR}年成立，深耕模具制造${moldYears}年，${INJECTION_BUSINESS_START_YEAR}年拓展注塑业务，拥有${injectionYears}年注塑生产经验。公司产业链成熟完善，长期服务多家外贸公司，产品远销美国、俄罗斯等海外地区；同时为国内上市公司提供定制化模具与注塑配套服务，品质与交付能力备受市场认可。`}
     image="https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=800&h=600&fit=crop"
     imageAlt="溢隆模具工厂"
-    i18n={{
-      tagline: 'index.about.tagline',
-      title: 'index.about.title',
-      description: 'index.about.desc',
-      features: ['index.about.f1', 'index.about.f2', 'index.about.f3', 'index.about.f4'],
-    }}
     features={[
       { title: '模房绝大部分工序自主完成', description: '自有独立模房，减少外协风险', icon: 'tabler:check' },
       { title: '全吨位注塑设备覆盖', description: '全吨位注塑机满足不同需求', icon: 'tabler:check' },
@@ -72,23 +110,9 @@ const metadata = {
     tagline="产品中心"
     title="专业定制各类塑胶模具"
     subtitle="模具设计、制造、注塑量产一站式服务，覆盖多种应用场景"
-    i18n={{
-      tagline: 'index.products.tagline',
-      title: 'index.products.title',
-      subtitle: 'index.products.subtitle',
-      items: ['index.products.i1', 'index.products.i2'],
-    }}
     items={[
-      {
-        title: '精密模具设计',
-        description: '提供各类塑胶模具定制服务，满足不同行业客户需求',
-        icon: 'tabler:tool',
-      },
-      {
-        title: '模塑一体化交付',
-        description: '模具交付后可同步承接注塑量产，一站式完成开模到成品',
-        icon: 'tabler:package',
-      },
+      { title: '精密模具设计', description: '提供各类塑胶模具定制服务，满足不同行业客户需求', icon: 'tabler:tool' },
+      { title: '模塑一体化交付', description: '模具交付后可同步承接注塑量产，一站式完成开模到成品', icon: 'tabler:package' },
     ]}
     image={{
       src: 'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?w=1200&h=800&fit=crop',
@@ -102,33 +126,11 @@ const metadata = {
     tagline="核心优势"
     title="为什么选择溢隆"
     subtitle="模塑一体化源头工厂，全流程自主可控"
-    i18n={{
-      tagline: 'index.why.tagline',
-      title: 'index.why.title',
-      subtitle: 'index.why.subtitle',
-      items: ['index.why.i1', 'index.why.i2', 'index.why.i3', 'index.why.i4'],
-    }}
     items={[
-      {
-        title: '绝大部分工序自主完成',
-        description: '自有独立模房与完整生产链条，关键工序自主把控，减少外协风险，确保品质与交付。',
-        icon: 'tabler:check',
-      },
-      {
-        title: '全吨位注塑设备梯队',
-        description: '全吨位注塑机覆盖多吨位区间，从小件到大壳体均可适配，灵活应对不同产品需求。',
-        icon: 'tabler:check',
-      },
-      {
-        title: '完整团队全流程自主',
-        description: '从模具设计、加工到注塑成型一站完成，沟通成本低，响应速度快。',
-        icon: 'tabler:check',
-      },
-      {
-        title: '国内外市场长期认可',
-        description: '产品远销美国、俄罗斯等地区，长期服务外贸企业及国内上市公司。',
-        icon: 'tabler:check',
-      },
+      { title: '绝大部分工序自主完成', description: '自有独立模房与完整生产链条，关键工序自主把控，减少外协风险，确保品质与交付。', icon: 'tabler:check' },
+      { title: '全吨位注塑设备梯队', description: '全吨位注塑机覆盖多吨位区间，从小件到大壳体均可适配，灵活应对不同产品需求。', icon: 'tabler:check' },
+      { title: '完整团队全流程自主', description: '从模具设计、加工到注塑成型一站完成，沟通成本低，响应速度快。', icon: 'tabler:check' },
+      { title: '国内外市场长期认可', description: '产品远销美国、俄罗斯等地区，长期服务外贸企业及国内上市公司。', icon: 'tabler:check' },
     ]}
     image={{
       src: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop',
@@ -136,8 +138,8 @@ const metadata = {
     }}
   >
     <Fragment slot="content">
-      <h3 class="text-2xl font-bold tracking-tight dark:text-white sm:text-3xl mb-2" data-i18n="index.why.content.title">模塑一体 · 源头交付</h3>
-      <span data-i18n="index.why.content.desc">从开模到注塑成型，溢隆以{moldYears}年模具经验为品质保障。</span>
+      <h3 class="text-2xl font-bold tracking-tight dark:text-white sm:text-3xl mb-2">模塑一体 · 源头交付</h3>
+      <span>从开模到注塑成型，溢隆以{moldYears}年模具经验为品质保障。</span>
     </Fragment>
   </Content>
 
@@ -145,19 +147,87 @@ const metadata = {
     tagline="下一页"
     title="产品中心"
     subtitle="查看所有产品，选择适合您的模具方案"
-    i18n={{
-      tagline: 'index.cta.tagline',
-      title: 'index.cta.title',
-      subtitle: 'index.cta.subtitle',
-      actions: ['index.cta.btn'],
-    }}
     actions={[
-      {
-        variant: 'primary',
-        text: '查看产品中心',
-        href: '/products',
-        icon: 'tabler:arrow-right',
-      },
+      { variant: 'primary', text: '查看产品中心', href: '/products', icon: 'tabler:arrow-right' },
     ]}
   />
 </Layout>
+
+<script define:vars={{ SSR_BANNERS }}>
+  import { publicApi } from '/src/lib/api.ts';
+
+  // 客户端兜底：如果 SSR 没拿到数据，再异步请求一次 banners，成功就替换 Hero 区域为 HeroSlider
+  (async () => {
+    if (SSR_BANNERS && (SSR_BANNERS as any[]).length) return; // SSR 已有数据就不动
+    try {
+      const r = await publicApi.bannersList('zh');
+      if (!r.ok || !Array.isArray(r.data) || !r.data.length) return;
+      const slot = document.getElementById('hero-slot');
+      if (!slot) return;
+      // 直接用 innerHTML 生成 HeroSlider 等价 DOM
+      const slides = r.data as any[];
+      const slidesHTML = slides.map((s, i) => `
+        <div class="slide-item absolute top-0 left-1/2 w-[72%] h-full transition-all duration-700 ease-out" data-index="${i}" aria-roledescription="slide" aria-label="${i + 1} / ${slides.length}" aria-hidden="${i !== 0}">
+          <div class="relative w-full h-full overflow-hidden rounded-2xl shadow-xl">
+            <img src="${s.image_url}" alt="${s.title || 'Banner'}" class="absolute inset-0 w-full h-full object-cover" loading="${i === 0 ? 'eager' : 'lazy'}" fetchpriority="${i === 0 ? 'high' : 'auto'}"/>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"/>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center max-w-xl mx-auto px-4">
+                ${s.title ? `<h2 class="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2">${s.title}</h2>` : ''}
+                ${s.subtitle ? `<p class="text-sm sm:text-base text-white/90 mb-4 max-w-md mx-auto">${s.subtitle}</p>` : ''}
+                ${s.link_url ? `<a href="${s.link_url}" class="inline-block px-5 py-2.5 bg-white text-gray-900 rounded-lg font-medium shadow hover:bg-gray-100 transition">了解更多 →</a>` : ''}
+              </div>
+            </div>
+          </div>
+        </div>`).join('');
+      const dotsHTML = slides.map((_, i) => `<button type="button" class="dot w-2 h-2 rounded-full transition-all duration-300" data-slide-index="${i}" aria-label="跳转到第 ${i + 1} 张"></button>`).join('');
+      slot.innerHTML = `
+        <section class="relative w-full not-prose max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8" data-slider data-interval="5000" data-slide-count="${slides.length}" aria-roledescription="carousel">
+          <div class="relative h-[220px] sm:h-[280px] md:h-[340px] lg:h-[400px]">
+            ${slidesHTML}
+            <button type="button" class="absolute left-0 top-1/2 -translate-y-1/2 z-40 flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/30 hover:bg-white/50 text-white transition-colors backdrop-blur-sm shadow-lg" data-action="prev" aria-label="上一张"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg></button>
+            <button type="button" class="absolute right-0 top-1/2 -translate-y-1/2 z-40 flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/30 hover:bg-white/50 text-white transition-colors backdrop-blur-sm shadow-lg" data-action="next" aria-label="下一张"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg></button>
+            <div class="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2">${dotsHTML}</div>
+          </div>
+        </section>`;
+      // 手动触发 HeroSlider 的内置 script（页面里已经加载过，通过 querySelector('[data-slider]') 绑定）
+      // 重新 dispatch DOMContentLoaded 给新插入的 slider：直接把 HeroSlider 原 script 跑一遍
+      const root = slot.querySelector('[data-slider]');
+      if (root) {
+        const style = document.createElement('style');
+        style.textContent = `.slide-item{opacity:0;pointer-events:none;filter:blur(6px);transform:translateX(-50%) scale(.9)}.slide-item.is-active{opacity:1;pointer-events:auto;z-index:30;transform:translateX(-50%) scale(1);filter:blur(0)}.slide-item.is-prev{opacity:.7;z-index:20;transform:translateX(-74%) scale(.9);filter:blur(5px)}.slide-item.is-next{opacity:.7;z-index:20;transform:translateX(-26%) scale(.9);filter:blur(5px)}.dot{background:rgba(255,255,255,.5)}.dot.is-active{background:#fff;transform:scale(1.3)}`;
+        document.head.appendChild(style);
+        startSlider(root as HTMLElement);
+      }
+    } catch (_) { /* 忽略，保留原 Hero */ }
+  })();
+
+  function startSlider(root: HTMLElement) {
+    const total = parseInt(root.dataset.slideCount || '0', 10);
+    const intervalMs = parseInt(root.dataset.interval || '5000', 10);
+    if (total <= 1) { const s = root.querySelector('.slide-item'); if (s) s.classList.add('is-active'); return; }
+    let cur = 0;
+    const items = root.querySelectorAll<HTMLElement>('.slide-item');
+    const dots = root.querySelectorAll<HTMLElement>('.dot');
+    const upd = () => {
+      items.forEach((s, i) => {
+        s.classList.remove('is-active', 'is-prev', 'is-next');
+        const d = (i - cur + total) % total;
+        if (d === 0) { s.classList.add('is-active'); s.setAttribute('aria-hidden', 'false'); }
+        else if (d === total - 1) { s.classList.add('is-prev'); s.setAttribute('aria-hidden', 'true'); }
+        else if (d === 1) { s.classList.add('is-next'); s.setAttribute('aria-hidden', 'true'); }
+        else s.setAttribute('aria-hidden', 'true');
+      });
+      dots.forEach((d, i) => d.classList.toggle('is-active', i === cur));
+    };
+    const go = (i: number) => { cur = (i + total) % total; upd(); };
+    const next = () => go(cur + 1); const prev = () => go(cur - 1);
+    let t: any; const start = () => { stop(); t = setInterval(next, intervalMs); };
+    const stop = () => { if (t) clearInterval(t); };
+    root.addEventListener('mouseenter', stop); root.addEventListener('mouseleave', start);
+    root.querySelectorAll('[data-action="next"]').forEach(b => b.addEventListener('click', () => { next(); start(); }));
+    root.querySelectorAll('[data-action="prev"]').forEach(b => b.addEventListener('click', () => { prev(); start(); }));
+    dots.forEach((d) => d.addEventListener('click', () => { go(parseInt(d.getAttribute('data-slide-index') || '0', 10)); start(); }));
+    upd(); start();
+  }
+</script>

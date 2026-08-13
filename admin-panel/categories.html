@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>产品分类管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    if (!Auth.requireAuth()) throw new Error('Unauthorized');
+    const root = App.initLayout('categories');
+
+    function openModal(item) {
+      item = item || {};
+      const isEdit = !!item?.id;
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4';
+      modal.innerHTML = `
+        <div class="bg-white rounded-xl w-full max-w-md">
+          <div class="p-5 border-b flex justify-between items-center">
+            <h3 class="font-semibold">${isEdit ? '编辑分类' : '新增分类'}</h3>
+            <button data-close class="text-gray-400 hover:text-gray-700 text-xl">&times;</button>
+          </div>
+          <div class="p-5 space-y-4">
+            <div><label class="block text-sm mb-1">分类名称 <span class="text-red-500">*</span></label>
+              <input id="f-name" value="${item.name || ''}" class="w-full border rounded px-3 py-2" placeholder="例如：汽车配件"/></div>
+            <div><label class="block text-sm mb-1">英文名称</label>
+              <input id="f-name_en" value="${item.name_en || ''}" class="w-full border rounded px-3 py-2" placeholder="Auto Parts"/></div>
+            <div><label class="block text-sm mb-1">URL Slug</label>
+              <input id="f-slug" value="${item.slug || ''}" class="w-full border rounded px-3 py-2" placeholder="auto-parts（可选）"/></div>
+            <div class="grid grid-cols-2 gap-4">
+              <div><label class="block text-sm mb-1">排序</label>
+                <input id="f-sort_order" type="number" value="${item.sort_order ?? 0}" class="w-full border rounded px-3 py-2"/></div>
+              <div class="flex items-end">
+                <label class="inline-flex items-center gap-2"><input id="f-is_active" type="checkbox" ${item.is_active !== false ? 'checked' : ''} class="w-4 h-4"/><span class="text-sm">启用</span></label>
+              </div>
+            </div>
+          </div>
+          <div class="p-5 border-t flex justify-end gap-2">
+            <button data-close class="px-4 py-2 border rounded hover:bg-gray-100">取消</button>
+            <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">保存</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+      modal.querySelectorAll('[data-close]').forEach(b => b.onclick = () => modal.remove());
+      modal.querySelector('#save-btn').onclick = async () => {
+        const form = {
+          name: modal.querySelector('#f-name').value.trim(),
+          name_en: modal.querySelector('#f-name_en').value.trim() || null,
+          slug: modal.querySelector('#f-slug').value.trim() || null,
+          sort_order: Number(modal.querySelector('#f-sort_order').value) || 0,
+          is_active: modal.querySelector('#f-is_active').checked,
+        };
+        if (!form.name) return App.toast('分类名称必填', 'error');
+        try {
+          if (isEdit) await API.categories.update(item.id, form);
+          else await API.categories.create(form);
+          App.toast('已保存', 'success');
+          modal.remove();
+          loadList();
+        } catch (err) { App.toast(err.message, 'error'); }
+      };
+    }
+
+    async function loadList() {
+      root.innerHTML = `
+        <div class="mb-6 flex justify-between items-center">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-800">产品分类</h1>
+            <p class="text-gray-500 mt-1">用于产品页按分类筛选，建议中英文双语</p>
+          </div>
+          <button id="new-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">➕ 新增分类</button>
+        </div>
+        <div class="bg-white rounded-xl shadow">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 text-gray-600">
+              <tr><th class="p-3 text-left w-20">排序</th><th class="p-3 text-left">中文名</th><th class="p-3 text-left">英文名</th><th class="p-3 text-left">Slug</th><th class="p-3 text-left">状态</th><th class="p-3 text-right w-40">操作</th></tr>
+            </thead>
+            <tbody id="tbody"><tr><td colspan="6" class="p-8 text-center text-gray-400">加载中...</td></tr></tbody>
+          </table>
+        </div>`;
+      document.getElementById('new-btn').onclick = () => openModal(null);
+      try {
+        const r = await API.categories.list();
+        const list = r.data || [];
+        document.getElementById('tbody').innerHTML = list.length ? list.map(c => `
+          <tr class="border-t hover:bg-gray-50">
+            <td class="p-3">${c.sort_order}</td>
+            <td class="p-3 font-medium">${c.name}</td>
+            <td class="p-3 text-gray-600">${c.name_en || '—'}</td>
+            <td class="p-3 text-gray-500 text-xs">${c.slug || '—'}</td>
+            <td class="p-3">${c.is_active ? '<span class="text-green-600">● 启用</span>' : '<span class="text-gray-400">○ 停用</span>'}</td>
+            <td class="p-3 text-right space-x-2">
+              <button data-edit="${c.id}" class="text-blue-600 hover:underline">编辑</button>
+              <button data-del="${c.id}" class="text-red-600 hover:underline">删除</button>
+            </td>
+          </tr>`).join('') : '<tr><td colspan="6" class="p-12 text-center text-gray-400">暂无分类</td></tr>';
+        document.querySelectorAll('[data-edit]').forEach(btn => btn.onclick = async () => {
+          const r = await API.categories.get(Number(btn.dataset.edit));
+          openModal({ ...r.data, is_active: r.data.is_active === 1 });
+        });
+        document.querySelectorAll('[data-del]').forEach(btn => btn.onclick = async () => {
+          if (!(await App.confirm('确认删除该分类？（已关联的产品不会被删，只是分类字段为空）'))) return;
+          await API.categories.delete(Number(btn.dataset.del));
+          App.toast('已删除', 'success');
+          loadList();
+        });
+      } catch (err) { App.toast(err.message, 'error'); }
+    }
+    loadList();
+  </script>
+</body>
+</html>

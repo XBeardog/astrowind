@@ -9,10 +9,18 @@ const {
   button = 'Contact us',
   description = '',
   i18n = {},
+  formId = 'contact-form',
 } = Astro.props;
+
+// 从 URL 里取 product_id 参数（产品页点跳转过来时带上）
+const qs = typeof Astro !== 'undefined' && (Astro as any)?.url?.searchParams;
+const initialProductId = qs?.get?.('product_id') || '';
 ---
 
-<form>
+<form id={formId} data-inquiry-form class="contact-inquiry-form" autocomplete="on" novalidate>
+  <input type="hidden" name="product_id" value={initialProductId}/>
+  <input type="hidden" name="source" value="website-contact"/>
+
   {
     inputs &&
       inputs.map(
@@ -30,7 +38,8 @@ const {
                 id={name}
                 autocomplete={autocomplete}
                 placeholder={placeholder}
-                class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900"
+                required={name === 'name' || name === 'email' || name === 'phone'}
+                class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60"
               />
             </div>
           )
@@ -48,8 +57,9 @@ const {
           name={textarea.name ? textarea.name : 'message'}
           rows={textarea.rows ? textarea.rows : 4}
           placeholder={textarea.placeholder}
-          class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900"
-        />
+          required
+          class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60"
+        ></textarea>
       </div>
     )
   }
@@ -62,7 +72,8 @@ const {
             id="disclaimer"
             name="disclaimer"
             type="checkbox"
-            class="cursor-pointer mt-1 py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900"
+            required
+            class="cursor-pointer mt-1 w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
           />
         </div>
         <div class="ml-3">
@@ -76,13 +87,15 @@ const {
 
   {
     button && (
-      <div class="mt-10 grid">
+      <div class="mt-8 grid">
         <Button variant="primary" type="submit" i18n={typeof i18n.button === 'string' ? i18n.button : ''}>
-          {button}
+          <span class="btn-text">{button}</span>
         </Button>
       </div>
     )
   }
+
+  <div id={`${formId}-message`} class="mt-4 hidden text-center text-sm rounded-lg px-4 py-3"></div>
 
   {
     description && (
@@ -92,3 +105,111 @@ const {
     )
   }
 </form>
+
+<script>
+  // 直接构造后端地址，避免 Astro define:vars 里 ESM import 时脚本不生效的问题
+  const DEFAULT_REMOTE = 'https://astrowind-worker.1900692808.workers.dev';
+  function getApiBase(): string {
+    const bodyAttr = document.body?.getAttribute('data-api-base');
+    if (bodyAttr) return bodyAttr.replace(/\/$/, '');
+    const h = window.location.hostname;
+    if (h === '127.0.0.1') return 'http://127.0.0.1:8787';
+    if (h === 'localhost') return 'http://localhost:8787';
+    return DEFAULT_REMOTE;
+  }
+  async function submitInquiry(payload: Record<string, any>) {
+    const url = getApiBase() + '/api/products/inquiries/submit';
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    let data: any = {};
+    try { data = await res.json(); } catch {}
+    return { ok: res.ok && !!data, data, error: data?.error || (!res.ok ? `HTTP ${res.status}` : undefined) };
+  }
+
+  function setupForm(formId: string) {
+    const form = document.getElementById(formId) as HTMLFormElement | null;
+    if (!form) return;
+    const messageEl = document.getElementById(`${formId}-message`)!;
+    const btnText = form.querySelector<HTMLElement>('.btn-text');
+    const originalBtnText = btnText?.textContent || '提交';
+
+    function showMessage(type: 'success' | 'error' | 'info', text: string) {
+      const map: Record<string, string> = {
+        success: 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800',
+        error: 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800',
+        info: 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800',
+      };
+      messageEl.className = `mt-4 text-center text-sm rounded-lg px-4 py-3 ${map[type]}`;
+      messageEl.textContent = text;
+      messageEl.classList.remove('hidden');
+    }
+
+    function setLoading(loading: boolean) {
+      const btn = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+      if (btn) {
+        btn.disabled = loading;
+        btn.classList.toggle('opacity-60', loading);
+        btn.classList.toggle('cursor-not-allowed', loading);
+      }
+      if (btnText) btnText.textContent = loading ? '提交中...' : originalBtnText;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      messageEl.classList.add('hidden');
+
+      const fd = new FormData(form);
+      const obj: Record<string, any> = {};
+      fd.forEach((v, k) => { obj[k] = typeof v === 'string' ? v.trim() : v; });
+
+      if (!obj.name) return showMessage('error', '请填写姓名');
+      if (!obj.email && !obj.phone) return showMessage('error', '邮箱或电话至少填写一项，方便我们与您联系');
+      if (!obj.message) return showMessage('error', '请填写您的需求描述');
+
+      setLoading(true);
+      try {
+        const r = await submitInquiry({
+          name: obj.name,
+          email: obj.email || undefined,
+          phone: obj.phone || undefined,
+          company: obj.company || undefined,
+          country: obj.country || undefined,
+          product_id: obj.product_id || undefined,
+          message: obj.message,
+          source: obj.source || 'website-contact',
+        });
+        if (!r.ok) throw new Error(r.error || '提交失败');
+        showMessage('success', '✅ 已收到您的询盘！我们的团队通常会在 24 小时内与您联系。');
+        const productId = obj.product_id;
+        const source = obj.source;
+        form.reset();
+        if (productId) {
+          const p = form.querySelector<HTMLInputElement>('input[name="product_id"]');
+          if (p) p.value = productId;
+        }
+        if (source) {
+          const s = form.querySelector<HTMLInputElement>('input[name="source"]');
+          if (s) s.value = source;
+        }
+      } catch (err: any) {
+        showMessage('error', '提交失败：' + (err?.message || '网络异常，请稍后再试或直接电话联系我们'));
+      } finally {
+        setLoading(false);
+      }
+    });
+  }
+
+  function mountAll() {
+    setupForm('contact-form');
+    // 其它 formId 可按需扩展
+    document.querySelectorAll<HTMLFormElement>('form[data-inquiry-form][id]').forEach((f) => setupForm(f.id));
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mountAll, { once: true });
+  } else {
+    mountAll();
+  }
+</script>

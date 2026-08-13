@@ -4,181 +4,253 @@ import HeroSlider from '~/components/widgets/HeroSlider.astro';
 import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
 import CallToAction from '~/components/widgets/CallToAction.astro';
 import { Icon } from 'astro-icon/components';
+import { publicApi } from '~/lib/api';
 
 const metadata = {
   title: '工厂实拍',
   description: '走进溢隆模具工厂，亲眼见证模塑一体化生产实力。自有独立模房，配套CNC、火花机、全吨位注塑机。',
 };
 
-const slides = [
-  {
-    title: '走进溢隆模具工厂',
-    subtitle: '自有独立模房，配套CNC、火花机、注塑机等全流程设备，绝大部分工序自主完成',
-    image: 'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?w=1920&h=1080&fit=crop',
-    alt: '工厂全景',
-  },
-  {
-    title: 'CNC加工车间',
-    subtitle: 'CNC加工设备，适配大型模具铣削',
-    image: 'https://images.unsplash.com/photo-1565043666747-69f6646db940?w=1920&h=1080&fit=crop',
-    alt: 'CNC车间',
-  },
-  {
-    title: '注塑生产车间',
-    subtitle: '全吨位覆盖注塑机，适配各类大小塑胶产品成型',
-    image: 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=1920&h=1080&fit=crop',
-    alt: '注塑车间',
-  },
+// SSR 预取（失败兜底空）
+let SSR_GALLERY: any[] = [];
+try {
+  const r = await publicApi.galleryList({ activeOnly: true }).catch(() => ({ data: [] }) as any);
+  SSR_GALLERY = Array.isArray(r.data) ? r.data : [];
+} catch {}
+
+const fallbackSlides = [
+  { title: '走进溢隆模具工厂', subtitle: '自有独立模房，配套CNC、火花机、注塑机等全流程设备，绝大部分工序自主完成', image: 'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?w=1920&h=1080&fit=crop', alt: '工厂全景' },
+  { title: 'CNC加工车间', subtitle: 'CNC加工设备，适配大型模具铣削', image: 'https://images.unsplash.com/photo-1565043666747-69f6646db940?w=1920&h=1080&fit=crop', alt: 'CNC车间' },
+  { title: '注塑生产车间', subtitle: '全吨位覆盖注塑机，适配各类大小塑胶产品成型', image: 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=1920&h=1080&fit=crop', alt: '注塑车间' },
 ];
 
-const equipmentImages = [
-  {
-    src: 'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?w=800&h=600&fit=crop',
-    alt: 'CNC加工车间',
-    title: 'CNC加工车间',
-    description: 'CNC加工设备，适配大型模具铣削',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1565043666747-69f6646db940?w=800&h=600&fit=crop',
-    alt: '火花机加工',
-    title: '火花机加工区',
-    description: '火花机加工，配套抛光工作台',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=800&h=600&fit=crop',
-    alt: '注塑车间',
-    title: '注塑生产车间',
-    description: '全吨位覆盖注塑机，适配各类塑胶产品成型',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1513828583688-c52646db42da?w=800&h=600&fit=crop',
-    alt: '模具装配',
-    title: '模具装配区',
-    description: '钻床、磨床与专用操作台，配件储备齐全',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=600&fit=crop',
-    alt: '试模检测',
-    title: '试模检测中心',
-    description: '上机检测、尺寸校准、工艺参数调试',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1565793298595-6a879b1d9492?w=800&h=600&fit=crop',
-    alt: '成品展示',
-    title: '注塑成品展示',
-    description: '高品质塑胶成品，远销美国、俄罗斯等海外地区',
-  },
-];
+// SSR 阶段把图片按 category 聚合（兜底 + SSR 数据合并，客户端再覆盖）
+const CAT_META: Record<string, { tab: string; icon: string }> = {
+  equipment:    { tab: '设备展示',   icon: 'tabler:photo' },
+  factory:      { tab: '工厂环境',   icon: 'tabler:building-factory' },
+  'product-show': { tab: '产品实拍', icon: 'tabler:box' },
+  team:         { tab: '团队风采',   icon: 'tabler:users' },
+};
+
+function groupByCat(list: any[]) {
+  const g: Record<string, any[]> = {};
+  for (const it of list) {
+    const k = it.category || 'factory';
+    (g[k] ||= []).push(it);
+  }
+  return g;
+}
+
+const SSR_GROUPED = groupByCat(SSR_GALLERY);
+const hasSSRData = SSR_GALLERY.length > 0;
 ---
 
 <Layout metadata={metadata}>
   <script is:inline define:vars={{ i18nVars: {} }}>
     document.body.setAttribute('data-i18n-vars', JSON.stringify(i18nVars));
   </script>
-  <HeroSlider slides={slides} interval={5000} i18n={[
+  <HeroSlider slides={fallbackSlides} interval={5000} i18n={[
     { title: 'factory.slide1.title', subtitle: 'factory.slide1.subtitle' },
     { title: 'factory.slide2.title', subtitle: 'factory.slide2.subtitle' },
     { title: 'factory.slide3.title', subtitle: 'factory.slide3.subtitle' },
   ]} />
 
-  <!-- 分类Tab -->
   <WidgetWrapper id="tabs" containerClass="max-w-7xl mx-auto">
-    <div class="flex justify-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-800">
-      <button
-        class="tab-btn active px-6 py-3 text-base font-semibold border-b-2 border-primary text-primary transition-colors"
-        data-tab="news"
-      >
-        <Icon name="tabler:news" class="w-5 h-5 inline-block mr-1.5 -mt-0.5" />
-        <span data-i18n="factory.tab.news">工厂动态</span>
-      </button>
-      <button
-        class="tab-btn px-6 py-3 text-base font-semibold border-b-2 border-transparent text-gray-500 dark:text-slate-400 hover:text-primary transition-colors"
-        data-tab="equipment"
-      >
-        <Icon name="tabler:photo" class="w-5 h-5 inline-block mr-1.5 -mt-0.5" />
-        <span data-i18n="factory.tab.equipment">设备展示</span>
-      </button>
-    </div>
-
-    <!-- 工厂动态 -->
-    <div id="tab-news" class="tab-content">
-      <div class="flex flex-col items-center justify-center py-16 text-center rounded-2xl bg-muted/5 dark:bg-muted/10">
-        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 text-primary mb-6">
-          <Icon name="tabler:news" class="w-10 h-10" />
+    {hasSSRData ? (
+      <div>
+        <div class="flex justify-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-800 flex-wrap">
+          {Object.keys(CAT_META).filter((k) => SSR_GROUPED[k]?.length).map((k, i) => (
+            <button
+              class="tab-btn px-6 py-3 text-base font-semibold border-b-2 transition-colors"
+              class:list={[i === 0 ? 'border-primary text-primary' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-primary']}
+              data-tab={k}
+            >
+              <Icon name={CAT_META[k].icon} class="w-5 h-5 inline-block mr-1.5 -mt-0.5" />
+              <span>{CAT_META[k].tab}</span>
+              <span class="ml-1 text-xs opacity-60">({SSR_GROUPED[k].length})</span>
+            </button>
+          ))}
         </div>
-        <p class="text-lg font-medium text-muted dark:text-slate-400 mb-2" data-i18n="factory.news.empty.title">暂无动态，敬请期待</p>
-        <p class="text-sm text-muted dark:text-slate-500" data-i18n="factory.news.empty.desc">动态内容将通过后台 D1 数据库录入，前端动态展示</p>
-      </div>
-    </div>
-
-    <!-- 设备展示 -->
-    <div id="tab-equipment" class="tab-content hidden">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {equipmentImages.map((image, idx) => (
-          <div class="group relative overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-            <div class="aspect-[4/3] overflow-hidden">
-              <img
-                src={image.src}
-                alt={image.alt}
-                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                loading="lazy"
-              />
-            </div>
-            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div class="absolute bottom-0 left-0 right-0 p-4 text-white">
-                <h3 class="text-lg font-semibold mb-0.5" data-i18n={`factory.equip${idx + 1}.title`}>{image.title}</h3>
-                <p class="text-sm text-white/80" data-i18n={`factory.equip${idx + 1}.desc`}>{image.description}</p>
-              </div>
+        {Object.keys(CAT_META).filter((k) => SSR_GROUPED[k]?.length).map((k, i) => (
+          <div id={`tab-${k}`} class:list={['tab-content', i !== 0 && 'hidden']}>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {SSR_GROUPED[k].map((g: any) => (
+                <div class="group relative overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                  <div class="aspect-[4/3] overflow-hidden">
+                    <img src={g.image_url} alt={g.title || '工厂图片'} class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy"/>
+                  </div>
+                  <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div class="absolute bottom-0 left-0 right-0 p-4 text-white">
+                      {g.title && <h3 class="text-lg font-semibold mb-0.5">{g.title}</h3>}
+                      {g.description && <p class="text-sm text-white/80">{g.description}</p>}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         ))}
       </div>
-    </div>
+    ) : (
+      <div>
+        <div class="flex justify-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-800 flex-wrap">
+          <button class="tab-btn active px-6 py-3 text-base font-semibold border-b-2 border-primary text-primary transition-colors" data-tab="factory">
+            <Icon name="tabler:building-factory" class="w-5 h-5 inline-block mr-1.5 -mt-0.5"/><span>工厂环境</span>
+          </button>
+          <button class="tab-btn px-6 py-3 text-base font-semibold border-b-2 border-transparent text-gray-500 dark:text-slate-400 hover:text-primary transition-colors" data-tab="equipment">
+            <Icon name="tabler:photo" class="w-5 h-5 inline-block mr-1.5 -mt-0.5"/><span data-i18n="factory.tab.equipment">设备展示</span>
+          </button>
+          <button class="tab-btn px-6 py-3 text-base font-semibold border-b-2 border-transparent text-gray-500 dark:text-slate-400 hover:text-primary transition-colors" data-tab="product-show">
+            <Icon name="tabler:box" class="w-5 h-5 inline-block mr-1.5 -mt-0.5"/><span>产品实拍</span>
+          </button>
+          <button class="tab-btn px-6 py-3 text-base font-semibold border-b-2 border-transparent text-gray-500 dark:text-slate-400 hover:text-primary transition-colors" data-tab="team">
+            <Icon name="tabler:users" class="w-5 h-5 inline-block mr-1.5 -mt-0.5"/><span>团队风采</span>
+          </button>
+        </div>
+        <div id="tab-factory" class="tab-content">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[
+              { s: 'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?w=800&h=600&fit=crop', t: '工厂大门', d: '整洁有序的厂区环境' },
+              { s: 'https://images.unsplash.com/photo-1565043666747-69f6646db940?w=800&h=600&fit=crop', t: '加工车间', d: '现代化 CNC 生产线' },
+              { s: 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=800&h=600&fit=crop', t: '注塑车间', d: '全吨位注塑机覆盖' },
+            ].map((x) => (
+              <div class="group relative overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                <div class="aspect-[4/3] overflow-hidden">
+                  <img src={x.s} alt={x.t} class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy"/>
+                </div>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div class="absolute bottom-0 left-0 right-0 p-4 text-white">
+                    <h3 class="text-lg font-semibold mb-0.5">{x.t}</h3>
+                    <p class="text-sm text-white/80">{x.d}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div id="tab-equipment" class="tab-content hidden">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[
+              { s: 'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?w=800&h=600&fit=crop', t: 'CNC加工车间', d: '适配大型模具铣削' },
+              { s: 'https://images.unsplash.com/photo-1565043666747-69f6646db940?w=800&h=600&fit=crop', t: '火花机加工区', d: '火花机加工，配套抛光工作台' },
+              { s: 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=800&h=600&fit=crop', t: '注塑生产车间', d: '全吨位覆盖注塑机' },
+              { s: 'https://images.unsplash.com/photo-1513828583688-c52646db42da?w=800&h=600&fit=crop', t: '模具装配区', d: '钻床、磨床与专用操作台' },
+              { s: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=600&fit=crop', t: '试模检测中心', d: '上机检测、尺寸校准' },
+              { s: 'https://images.unsplash.com/photo-1565793298595-6a879b1d9492?w=800&h=600&fit=crop', t: '注塑成品展示', d: '高品质塑胶成品' },
+            ].map((x) => (
+              <div class="group relative overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                <div class="aspect-[4/3] overflow-hidden">
+                  <img src={x.s} alt={x.t} class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy"/>
+                </div>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div class="absolute bottom-0 left-0 right-0 p-4 text-white">
+                    <h3 class="text-lg font-semibold mb-0.5">{x.t}</h3>
+                    <p class="text-sm text-white/80">{x.d}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div id="tab-product-show" class="tab-content hidden">
+          <div class="flex flex-col items-center justify-center py-16 text-center rounded-2xl bg-muted/5 dark:bg-muted/10">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 text-primary mb-6">
+              <Icon name="tabler:box" class="w-10 h-10"/>
+            </div>
+            <p class="text-lg font-medium text-muted dark:text-slate-400 mb-2">暂无产品实拍</p>
+            <p class="text-sm text-muted dark:text-slate-500">上传工厂实拍产品图后会展示在这里</p>
+          </div>
+        </div>
+        <div id="tab-team" class="tab-content hidden">
+          <div class="flex flex-col items-center justify-center py-16 text-center rounded-2xl bg-muted/5 dark:bg-muted/10">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 text-primary mb-6">
+              <Icon name="tabler:users" class="w-10 h-10"/>
+            </div>
+            <p class="text-lg font-medium text-muted dark:text-slate-400 mb-2">暂无团队风采</p>
+            <p class="text-sm text-muted dark:text-slate-500">上传团队照片后会展示在这里</p>
+          </div>
+        </div>
+      </div>
+    )}
   </WidgetWrapper>
 
   <CallToAction
     tagline="下一页"
     title="关于我们"
     subtitle="深耕模具制造，集模具设计制造、注塑成型于一体的模塑一体化源头工厂"
-    i18n={{
-      tagline: 'factory.cta.tagline',
-      title: 'factory.cta.title',
-      subtitle: 'factory.cta.subtitle',
-      actions: ['factory.cta.btn'],
-    }}
-    actions={[
-      {
-        variant: 'primary',
-        text: '查看关于我们',
-        href: '/about',
-        icon: 'tabler:arrow-right',
-      },
-    ]}
+    actions={[{ variant: 'primary', text: '查看关于我们', href: '/about', icon: 'tabler:arrow-right' }]}
   />
 </Layout>
 
-<script is:inline data-astro-rerun>
-  const tabButtons = document.querySelectorAll('.tab-btn');
-  const tabContents = document.querySelectorAll('.tab-content');
+<script define:vars={{ SSR_GALLERY }}>
+  import { publicApi } from '/src/lib/api.ts';
+  import { bindTabs } from '/src/lib/ui.ts';
 
-  tabButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const tab = btn.getAttribute('data-tab');
+  function renderGalleryTabs(list: any[]) {
+    const tabs = document.getElementById('tabs')!;
+    const by: Record<string, any[]> = {};
+    const order = ['factory', 'equipment', 'product-show', 'team'];
+    for (const it of list) {
+      const k = it.category || 'factory';
+      (by[k] ||= []).push(it);
+    }
+    const have = order.filter((k) => by[k]?.length);
+    if (!have.length) {
+      tabs.innerHTML = `<div class="rounded-2xl bg-muted/5 dark:bg-muted/10 p-10 text-center">
+        <div class="text-4xl mb-3">🏭</div>
+        <p class="font-medium">暂无工厂实拍图片</p>
+        <p class="text-sm text-muted mt-1">管理员在后台上传后，会实时展示在这里</p>
+      </div>`;
+      return;
+    }
+    const LABEL: Record<string, string> = { factory: '工厂环境', equipment: '设备展示', 'product-show': '产品实拍', team: '团队风采' };
+    const ICON: Record<string, string> = { factory: 'building-factory', equipment: 'photo', 'product-show': 'box', team: 'users' };
+    tabs.innerHTML = `
+      <div class="flex justify-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-800 flex-wrap">
+        ${have.map((k, i) => `
+          <button class="tab-btn px-6 py-3 text-base font-semibold border-b-2 transition-colors ${i === 0 ? 'border-primary text-primary' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-primary'}" data-tab="${k}">
+            <span class="i-tabler-${ICON[k]} w-5 h-5 inline-block mr-1.5 -mt-0.5"></span>
+            <span>${LABEL[k]}</span>
+            <span class="ml-1 text-xs opacity-60">(${by[k].length})</span>
+          </button>
+        `).join('')}
+      </div>
+      ${have.map((k, i) => `
+        <div id="tab-${k}" class="tab-content ${i !== 0 ? 'hidden' : ''}">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${by[k].map((g) => `
+              <div class="group relative overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                <div class="aspect-[4/3] overflow-hidden">
+                  <img src="${g.image_url}" alt="${g.title || '工厂图片'}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy"/>
+                </div>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div class="absolute bottom-0 left-0 right-0 p-4 text-white">
+                    ${g.title ? `<h3 class="text-lg font-semibold mb-0.5">${g.title}</h3>` : ''}
+                    ${g.description ? `<p class="text-sm text-white/80">${g.description}</p>` : ''}
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('')}
+    `;
+    bindTabs(tabs);
+  }
 
-      tabButtons.forEach((b) => {
-        b.classList.remove('border-primary', 'text-primary');
-        b.classList.add('border-transparent', 'text-gray-500', 'dark:text-slate-400');
-      });
-      btn.classList.add('border-primary', 'text-primary');
-      btn.classList.remove('border-transparent', 'text-gray-500', 'dark:text-slate-400');
+  // 初始绑 SSR 兜底的 tabs
+  const initialTabsEl = document.getElementById('tabs');
+  if (initialTabsEl) bindTabs(initialTabsEl);
 
-      tabContents.forEach((c) => {
-        if (c.id === `tab-${tab}`) {
-          c.classList.remove('hidden');
-        } else {
-          c.classList.add('hidden');
-        }
-      });
-    });
-  });
+  // 异步拉真实数据
+  (async () => {
+    try {
+      const r = await publicApi.galleryList({ activeOnly: true });
+      if (r.ok && Array.isArray(r.data) && r.data.length) {
+        renderGalleryTabs(r.data);
+        return;
+      }
+    } catch (_) { /* 保留 SSR 兜底 */ }
+    if (SSR_GALLERY.length) renderGalleryTabs(SSR_GALLERY as any[]);
+  })();
 </script>

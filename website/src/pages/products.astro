@@ -2,8 +2,9 @@
 import Layout from '~/layouts/PageLayout.astro';
 import Hero from '~/components/widgets/Hero.astro';
 import CallToAction from '~/components/widgets/CallToAction.astro';
-import ProductGrid from '~/components/widgets/ProductGrid.astro';
 import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import ProductGrid from '~/components/widgets/ProductGrid.astro';
+import { publicApi } from '~/lib/api';
 
 const metadata = {
   title: '产品中心',
@@ -11,88 +12,31 @@ const metadata = {
     '溢隆模具主营结构件模具、包胶模具、潮玩玩具模具、大型壳体模具定制，模具交付后可同步承接注塑量产，提供模具+注塑一站式服务。',
 };
 
-const products = [
-  {
-    image: 'https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?w=600&h=450&fit=crop',
-    alt: '尼龙螺母模具',
-    title: '尼龙螺母模具',
-    category: '结构件',
-    description: '严控螺纹精度与装配配合公差，零部件互换性强。适用尼龙、ABS、PVC、PP等原料。',
-    tags: ['螺纹精密', '装配级', '多原料'],
-    href: '/contact',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1612631512728-1e2f0b066b35?w=600&h=450&fit=crop',
-    alt: '卡扣配件模具',
-    title: '卡扣配件模具',
-    category: '结构件',
-    description: '塑胶装配组件、卡扣配件定制模具，配合公差精准，批量注塑品质稳定。',
-    tags: ['卡扣结构', '批量注塑', '互换性强'],
-    href: '/contact',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1606293459339-aa5d34a7b0e1?w=600&h=450&fit=crop',
-    alt: '防滑外壳包胶模具',
-    title: '防滑外壳包胶模具',
-    category: '包胶模具',
-    description: '二次软硬胶包胶注塑，解决粘合、封胶、溢料痛点，杜绝分层、溢边。',
-    tags: ['软硬胶包胶', '防滑', '密封性好'],
-    href: '/contact',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1581235720704-06d3acfcb36f?w=600&h=450&fit=crop',
-    alt: '工具握持配件包胶模具',
-    title: '工具握持配件包胶模具',
-    category: '包胶模具',
-    description: '工具握持部位包胶定制，舒适防滑，耐用不脱胶，支持批量注塑量产。',
-    tags: ['握持舒适', '耐磨', '量产稳定'],
-    href: '/contact',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1558877385-8c1b8b1cc3bb?w=600&h=450&fit=crop',
-    alt: '盲盒公仔模具',
-    title: '盲盒公仔模具',
-    category: '潮玩玩具',
-    description: '精细曲面加工，精准控制分型线，降低后期打磨成本，装配间隙紧密。',
-    tags: ['精细曲面', '分型线精准', '免打磨'],
-    href: '/contact',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=600&h=450&fit=crop',
-    alt: '潮玩手办模具',
-    title: '潮玩手办模具',
-    category: '潮玩玩具',
-    description: '复杂曲面潮玩手办模具开发，高精度加工，支持拼装益智玩具批量注塑。',
-    tags: ['复杂曲面', '高精度', '批量注塑'],
-    href: '/contact',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1565514020179-026b92b2d70b?w=600&h=450&fit=crop',
-    alt: '大型设备外壳模具',
-    title: '大型设备外壳模具',
-    category: '大型壳体',
-    description: '优化模具冷却、排气结构，改善缩水、变形缺陷。自有大行程CNC+大吨位注塑机。',
-    tags: ['大行程CNC', '冷却优化', '防变形'],
-    href: '/contact',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=600&h=450&fit=crop',
-    alt: '大容量容器模具',
-    title: '大容量塑胶容器模具',
-    category: '大型壳体',
-    description: '大件壳体模具定制，配套大吨位注塑机完成加工、试模、量产全流程。',
-    tags: ['大吨位注塑', '全流程', '量产保障'],
-    href: '/contact',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1581094271901-7d32e8b1c8b2?w=600&h=450&fit=crop',
-    alt: '防护塑胶件包胶模具',
-    title: '防护塑胶件包胶模具',
-    category: '包胶模具',
-    description: '防护塑胶件包胶定制，抗冲击、耐老化，适用于工业防护场景。',
-    tags: ['抗冲击', '耐老化', '工业级'],
-    href: '/contact',
-  },
+// —— SSR 阶段尝试拉一次（如果 CF Worker 可访问就用，失败兜底空数组，客户端再补）
+let SSR_PRODUCTS: any[] = [];
+let SSR_CATEGORIES: any[] = [];
+try {
+  const [p, c] = await Promise.all([
+    publicApi.productsList({ activeOnly: true }).catch(() => ({ data: [] }) as any),
+    publicApi.categoriesList().catch(() => ({ data: [] }) as any),
+  ]);
+  SSR_PRODUCTS = Array.isArray(p.data) ? p.data : [];
+  SSR_CATEGORIES = Array.isArray(c.data) ? c.data : [];
+} catch {
+  SSR_PRODUCTS = [];
+  SSR_CATEGORIES = [];
+}
+
+// 兜底：SSR 取不到时，仍渲染旧静态示例（不至于空白），客户端拿到真实数据会整体替换
+const fallbackProducts = [
+  { image: 'https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?w=600&h=450&fit=crop', alt: '尼龙螺母模具', title: '尼龙螺母模具', category: '结构件', description: '严控螺纹精度与装配配合公差，零部件互换性强。', tags: ['螺纹精密', '装配级'], href: '/contact' },
+  { image: 'https://images.unsplash.com/photo-1612631512728-1e2f0b066b35?w=600&h=450&fit=crop', alt: '卡扣配件模具', title: '卡扣配件模具', category: '结构件', description: '塑胶装配组件、卡扣配件定制模具，批量注塑品质稳定。', tags: ['卡扣结构', '批量注塑'], href: '/contact' },
+  { image: 'https://images.unsplash.com/photo-1606293459339-aa5d34a7b0e1?w=600&h=450&fit=crop', alt: '防滑外壳包胶模具', title: '防滑外壳包胶模具', category: '包胶模具', description: '二次软硬胶包胶注塑，杜绝分层、溢边。', tags: ['软硬胶包胶', '防滑'], href: '/contact' },
+  { image: 'https://images.unsplash.com/photo-1581235720704-06d3acfcb36f?w=600&h=450&fit=crop', alt: '工具握持配件包胶模具', title: '工具握持配件包胶模具', category: '包胶模具', description: '工具握持部位包胶定制，舒适防滑耐用不脱胶。', tags: ['握持舒适', '耐磨'], href: '/contact' },
+  { image: 'https://images.unsplash.com/photo-1558877385-8c1b8b1cc3bb?w=600&h=450&fit=crop', alt: '盲盒公仔模具', title: '盲盒公仔模具', category: '潮玩玩具', description: '精细曲面加工，精准控制分型线，降低后期打磨成本。', tags: ['精细曲面', '免打磨'], href: '/contact' },
+  { image: 'https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=600&h=450&fit=crop', alt: '潮玩手办模具', title: '潮玩手办模具', category: '潮玩玩具', description: '复杂曲面潮玩手办模具开发，高精度加工。', tags: ['复杂曲面', '高精度'], href: '/contact' },
+  { image: 'https://images.unsplash.com/photo-1565514020179-026b92b2d70b?w=600&h=450&fit=crop', alt: '大型设备外壳模具', title: '大型设备外壳模具', category: '大型壳体', description: '优化冷却/排气结构，改善缩水变形缺陷。', tags: ['大行程CNC', '冷却优化'], href: '/contact' },
+  { image: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=600&h=450&fit=crop', alt: '大容量塑胶容器模具', title: '大容量塑胶容器模具', category: '大型壳体', description: '大件壳体模具定制，配套大吨位注塑量产。', tags: ['大吨位注塑', '量产保障'], href: '/contact' },
 ];
 ---
 
@@ -104,19 +48,57 @@ const products = [
     i18n={{ title: 'products.hero.title' }}
   />
 
-  <!-- 分类筛选栏 + 产品列表 -->
   <WidgetWrapper containerClass="max-w-7xl mx-auto !py-0">
-    <div class="flex flex-wrap items-center gap-3 pt-2 pb-3 border-b border-gray-100 dark:border-slate-800">
-      <span class="text-sm font-semibold text-gray-500 dark:text-slate-400 mr-2" data-i18n="products.filter.label">产品分类：</span>
-      <button class="px-4 py-1.5 rounded-full text-sm font-medium bg-primary text-white shadow-sm" data-filter="all" data-i18n="products.filter.all">全部</button>
-      <button class="px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-primary hover:text-white transition-colors" data-filter="结构件" data-i18n="products.filter.structural">结构件/紧固件</button>
-      <button class="px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-primary hover:text-white transition-colors" data-filter="包胶模具" data-i18n="products.filter.overmold">包胶模具</button>
-      <button class="px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-primary hover:text-white transition-colors" data-filter="潮玩玩具" data-i18n="products.filter.toy">潮玩/玩具</button>
-      <button class="px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-primary hover:text-white transition-colors" data-filter="大型壳体" data-i18n="products.filter.large">大型壳体</button>
+    <!-- 分类筛选（会被客户端脚本用真实数据重新渲染） -->
+    <div id="category-bar" class="flex flex-wrap items-center gap-3 pt-2 pb-3 border-b border-gray-100 dark:border-slate-800">
+      <span class="text-sm font-semibold text-gray-500 dark:text-slate-400 mr-2">产品分类：</span>
+      {SSR_CATEGORIES.length > 0 ? (
+        <>
+          <button class="cat-btn px-4 py-1.5 rounded-full text-sm font-medium bg-primary text-white shadow-sm" data-category-id="0">全部</button>
+          {SSR_CATEGORIES.map((c) => (
+            <button class="cat-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-primary hover:text-white transition-colors" data-category-id={c.id}>
+              {c.name}
+            </button>
+          ))}
+        </>
+      ) : (
+        <>
+          <button class="cat-btn px-4 py-1.5 rounded-full text-sm font-medium bg-primary text-white shadow-sm" data-category-id="0" data-filter="all">全部</button>
+          <button class="cat-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-primary hover:text-white transition-colors" data-filter="结构件">结构件/紧固件</button>
+          <button class="cat-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-primary hover:text-white transition-colors" data-filter="包胶模具">包胶模具</button>
+          <button class="cat-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-primary hover:text-white transition-colors" data-filter="潮玩玩具">潮玩/玩具</button>
+          <button class="cat-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-primary hover:text-white transition-colors" data-filter="大型壳体">大型壳体</button>
+        </>
+      )}
+      <div class="ml-auto flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+        <input id="search-input" type="search" placeholder="搜索产品名称 / SKU..." class="flex-1 sm:flex-none w-full sm:w-64 px-3 py-1.5 rounded-full border border-gray-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-900"/>
+      </div>
     </div>
 
-    <div id="product-list" class="pt-3">
-      <ProductGrid products={products} columns={3} />
+    <!-- 产品列表（SSR 渲染兜底；客户端真实数据加载完会整个替换 innerHTML） -->
+    <div id="product-list" class="pt-3 pb-8 min-h-[300px]">
+      {SSR_PRODUCTS.length > 0 ? (
+        <ProductGrid
+          products={SSR_PRODUCTS.map((p) => ({
+            image: p.image_url || 'https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?w=600&h=450&fit=crop',
+            alt: p.name,
+            title: p.name,
+            category: p.category_name || (p.category_id ? '分类 #' + p.category_id : '未分类'),
+            description: p.description || '（暂无描述）',
+            tags: Array.isArray(p.tags) ? p.tags : [],
+            href: p.id ? `/contact#form?product_id=${p.id}` : '/contact',
+          }))}
+          columns={3}
+        />
+      ) : (
+        <ProductGrid products={fallbackProducts} columns={3} />
+      )}
+    </div>
+
+    <div id="product-empty" class="hidden text-center py-16 bg-white rounded-2xl border border-dashed border-gray-300 dark:border-slate-700">
+      <div class="text-5xl mb-3">📦</div>
+      <p class="font-medium text-gray-700 dark:text-slate-200">暂未找到匹配的产品</p>
+      <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">试试其他分类或清除搜索关键词</p>
     </div>
   </WidgetWrapper>
 
@@ -124,48 +106,136 @@ const products = [
     tagline="下一页"
     title="业务服务"
     subtitle="模具定制、注塑生产、试模服务、定制塑料件，一眼了解我们能做什么"
-    i18n={{
-      tagline: 'products.cta.tagline',
-      title: 'products.cta.title',
-      subtitle: 'products.cta.subtitle',
-      actions: ['products.cta.btn'],
-    }}
-    actions={[
-      {
-        variant: 'primary',
-        text: '查看业务服务',
-        href: '/services',
-        icon: 'tabler:arrow-right',
-      },
-    ]}
+    actions={[{ variant: 'primary', text: '查看业务服务', href: '/services', icon: 'tabler:arrow-right' }]}
   />
 </Layout>
 
-<script is:inline data-astro-rerun>
-  const filterButtons = document.querySelectorAll('[data-filter]');
-  const productCards = document.querySelectorAll('#product-list .group');
+<script define:vars={{ SSR: { SSR_PRODUCTS, SSR_CATEGORIES } }}>
+  // 运行时：异步从公开 API 拉真实数据，实现实时更新
+  import { publicApi, API_BASE } from '/src/lib/api.ts';
 
-  filterButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const filter = btn.getAttribute('data-filter') ?? '';
-
-      // 更新按钮状态
-      filterButtons.forEach((b) => {
-        b.classList.remove('bg-primary', 'text-white', 'shadow-sm');
-        b.classList.add('bg-gray-100', 'dark:bg-slate-800', 'text-gray-600', 'dark:text-slate-300');
-      });
-      btn.classList.add('bg-primary', 'text-white', 'shadow-sm');
-      btn.classList.remove('bg-gray-100', 'dark:bg-slate-800', 'text-gray-600', 'dark:text-slate-300');
-
-      // 筛选产品
-      productCards.forEach((card) => {
-        const category = card.querySelector('.group span')?.textContent ?? '';
-        if (filter === 'all' || category.includes(filter)) {
-          card.style.display = '';
-        } else {
-          card.style.display = 'none';
-        }
-      });
-    });
+  const toCard = (p: any) => ({
+    image: p.image_url || 'https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?w=600&h=450&fit=crop',
+    alt: p.name,
+    title: p.name,
+    category: p.category_name || (p.category_id ? '分类 #' + p.category_id : '未分类'),
+    description: p.description || '（暂无描述）',
+    tags: Array.isArray(p.tags) ? p.tags : [],
+    href: p.id ? `/contact#form?product_id=${p.id}` : '/contact',
   });
+
+  function renderGrid(cards: any[]) {
+    const grid = document.getElementById('product-list');
+    const empty = document.getElementById('product-empty')!;
+    if (!cards.length) {
+      if (grid) grid.innerHTML = '';
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+    const cols = 'sm:grid-cols-2 lg:grid-cols-3';
+    const html = `<div class="grid grid-cols-1 ${cols} gap-4">${cards.map(card).join('')}</div>`;
+    if (grid) grid.innerHTML = html;
+  }
+
+  function card(c: any): string {
+    const tags = (c.tags && c.tags.length)
+      ? `<div class="flex flex-wrap gap-1.5 mb-2">${c.tags.map((t: string) => `<span class="inline-block px-2 py-0.5 text-xs rounded-md bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300">${t}</span>`).join('')}</div>`
+      : '';
+    return `<a href="${c.href}" class="group flex flex-col bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100 dark:border-slate-800 hover:-translate-y-1">
+      <div class="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-slate-800">
+        <img src="${c.image}" alt="${c.alt}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy"/>
+        <div class="absolute top-3 left-3"><span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-primary text-white shadow-sm">${c.category}</span></div>
+      </div>
+      <div class="flex flex-col flex-1 p-4">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1 group-hover:text-primary transition-colors">${c.title}</h3>
+        <p class="text-sm text-gray-500 dark:text-slate-400 mb-2 line-clamp-3 flex-1">${c.description}</p>
+        ${tags}
+      </div>
+    </a>`;
+  }
+
+  let allProducts: any[] = (SSR.SSR_PRODUCTS && SSR.SSR_PRODUCTS.length ? SSR.SSR_PRODUCTS : []) as any[];
+  let categories: any[] = (SSR.SSR_CATEGORIES || []) as any[];
+  let activeCatId: number = 0;
+  let keyword = '';
+
+  function applyFilter() {
+    const kw = keyword.trim().toLowerCase();
+    const list = allProducts.filter((p) => {
+      if (activeCatId && Number(p.category_id) !== activeCatId) return false;
+      if (kw) {
+        const hay = [p.name, p.name_en, p.sku, p.description, (p.tags || []).join(' ')].filter(Boolean).join(' ').toLowerCase();
+        if (!hay.includes(kw)) return false;
+      }
+      return true;
+    });
+    renderGrid(list.map(toCard));
+  }
+
+  function renderCategories() {
+    const bar = document.getElementById('category-bar');
+    if (!bar || !categories.length) return;
+    // 重新生成分类按钮（保留搜索框）
+    const searchEl = document.getElementById('search-input');
+    const searchHTML = searchEl ? `<div class="ml-auto flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">${searchEl.outerHTML}</div>` : '';
+    const btns = [
+      `<button class="cat-btn px-4 py-1.5 rounded-full text-sm font-medium ${activeCatId === 0 ? 'bg-primary text-white shadow-sm' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-primary hover:text-white transition-colors'}" data-category-id="0">全部</button>`,
+      ...categories.map((c) =>
+        `<button class="cat-btn px-4 py-1.5 rounded-full text-sm font-medium ${activeCatId === Number(c.id) ? 'bg-primary text-white shadow-sm' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-primary hover:text-white transition-colors'}" data-category-id="${c.id}">${c.name}</button>`
+      ),
+    ].join('');
+    bar.innerHTML = `<span class="text-sm font-semibold text-gray-500 dark:text-slate-400 mr-2">产品分类：</span>${btns}${searchHTML}`;
+    bindUI();
+  }
+
+  function bindUI() {
+    document.querySelectorAll<HTMLButtonElement>('#category-bar [data-category-id]').forEach((btn) => {
+      btn.onclick = () => {
+        activeCatId = Number(btn.dataset.categoryId || 0);
+        renderCategories();
+        applyFilter();
+      };
+    });
+    // 旧页面兜底：按字符串分类 filter（兼容未加载真实 categories 前）
+    document.querySelectorAll<HTMLButtonElement>('#category-bar [data-filter]').forEach((btn) => {
+      btn.onclick = () => {
+        const f = btn.dataset.filter || '';
+        document.querySelectorAll('.cat-btn').forEach((b) => {
+          b.classList.remove('bg-primary', 'text-white', 'shadow-sm');
+          b.classList.add('bg-gray-100', 'dark:bg-slate-800', 'text-gray-600', 'dark:text-slate-300');
+        });
+        btn.classList.add('bg-primary', 'text-white', 'shadow-sm');
+        btn.classList.remove('bg-gray-100', 'dark:bg-slate-800', 'text-gray-600', 'dark:text-slate-300');
+        document.querySelectorAll<HTMLElement>('#product-list .group').forEach((card) => {
+          const txt = (card.querySelector('span.inline-flex') || ({} as any)).textContent || '';
+          card.style.display = (f === 'all' || txt.includes(f)) ? '' : 'none';
+        });
+      };
+    });
+    const si = document.getElementById('search-input') as HTMLInputElement | null;
+    if (si) {
+      si.value = keyword;
+      si.oninput = (e: any) => {
+        keyword = (e.target as HTMLInputElement).value;
+        applyFilter();
+      };
+    }
+  }
+  bindUI();
+
+  // ---- 异步从接口拉真实数据（失败就保留当前 SSR 数据） ----
+  (async () => {
+    try {
+      const [p, c] = await Promise.all([publicApi.productsList({ activeOnly: true }), publicApi.categoriesList()]);
+      if (p.ok && Array.isArray(p.data) && p.data.length) allProducts = p.data;
+      if (c.ok && Array.isArray(c.data) && c.data.length) {
+        categories = c.data;
+        renderCategories();
+      }
+      applyFilter();
+    } catch (_) {
+      /* 忽略：接口不可达时保留 SSR 兜底 */
+    }
+  })();
 </script>
