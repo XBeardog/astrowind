@@ -1,0 +1,93 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import HeroText from '~/components/widgets/HeroText.astro';
+import ContactUs from '~/components/widgets/Contact.astro';
+import Features2 from '~/components/widgets/Features2.astro';
+
+const metadata = {
+  title: '联系我们',
+};
+---
+
+<Layout metadata={metadata}>
+  <script is:inline define:vars={{ i18nVars: {} }}>
+    document.body.setAttribute('data-i18n-vars', JSON.stringify(i18nVars));
+  </script>
+
+  <!-- HeroText Widget ******************* -->
+
+  <HeroText
+    tagline="Contact"
+    title="联系我们"
+    i18n={{ tagline: 'contact.hero.tagline', title: 'contact.hero.title' }}
+  />
+
+  <!-- ContactUs Widget ******************* -->
+
+  <ContactUs
+    id="form"
+    title="提交您的询盘"
+    subtitle="请留下您的需求信息，我们的团队将尽快与您联系"
+    inputs={[
+      { type: 'text', name: 'name', label: '姓名' },
+      { type: 'email', name: 'email', label: '邮箱' },
+      { type: 'tel', name: 'phone', label: '电话' },
+      { type: 'text', name: 'company', label: '公司' },
+    ]}
+    textarea={{
+      label: '需求描述',
+    }}
+    button="提交询盘"
+    description="我们通常在24小时内回复"
+    i18n={{
+      title: 'contact.form.title',
+      subtitle: 'contact.form.subtitle',
+      inputs: ['contact.form.name', 'contact.form.email', 'contact.form.phone', 'contact.form.company'],
+      textarea: 'contact.form.message',
+      description: 'contact.form.desc',
+      button: 'contact.form.btn',
+    }}
+  />
+
+  <!-- Features2 Widget ************** -->
+
+  <Features2
+    columns={3}
+    i18n={{
+      items: [
+        'contact.info.address',
+        'contact.info.phone',
+        'contact.info.email',
+        'contact.info.business',
+        'contact.info.visit',
+      ],
+    }}
+    items={[
+      {
+        title: '公司地址',
+        description: '东莞市东坑镇小塘工业区雄顺五金园区内',
+        icon: 'tabler:map-pin',
+      },
+      {
+        title: '电话咨询',
+        description: '+86 132 8884 8848',
+        icon: 'tabler:phone',
+      },
+      {
+        title: '邮箱咨询',
+        description: '可留言或来电',
+        icon: 'tabler:mail',
+      },
+      {
+        title: '业务咨询',
+        description: '模具定制、注塑生产',
+        icon: 'tabler:message',
+      },
+      {
+        title: '参观预约',
+        description: '欢迎来厂实地考察',
+        icon: 'tabler:calendar',
+      },
+    ]}
+  />
+</Layout>

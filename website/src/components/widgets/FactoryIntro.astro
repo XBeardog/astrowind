@@ -1,0 +1,129 @@
+---
+import { Icon } from 'astro-icon/components';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import Headline from '~/components/ui/Headline.astro';
+import Button from '~/components/ui/Button.astro';
+import Image from '~/components/common/Image.astro';
+
+export interface FeatureItem {
+  title: string;
+  description: string;
+  icon?: string;
+}
+
+export interface Props {
+  id?: string;
+  tagline?: string;
+  title?: string;
+  subtitle?: string;
+  description?: string;
+  image?: string | unknown;
+  imageAlt?: string;
+  features?: FeatureItem[];
+  stats?: Array<{ title: string; amount: string; icon?: string }>;
+  callToAction?: Array<{
+    variant?: 'primary' | 'secondary' | 'tertiary' | 'link';
+    text: string;
+    href: string;
+    target?: '_blank' | '_self';
+    icon?: string;
+  }>;
+  isReversed?: boolean;
+  i18n?: Record<string, string | string[]>;
+}
+
+const {
+  id,
+  tagline = 'About Us',
+  title = '工厂介绍',
+  subtitle,
+  description,
+  image,
+  imageAlt,
+  features = [],
+  stats = [],
+  callToAction = [],
+  isReversed = false,
+  i18n = {},
+} = Astro.props;
+---
+
+<WidgetWrapper id={id} containerClass="max-w-7xl mx-auto">
+  <div class={`md:flex ${isReversed ? 'md:flex-row-reverse' : ''} md:gap-12 items-center`}>
+    <div class="md:basis-1/2 mb-10 md:mb-0">
+      <Headline
+        tagline={tagline}
+        title={title}
+        subtitle={subtitle}
+        i18n={i18n}
+        classes={{
+          container: 'text-left',
+          title: 'text-3xl md:text-4xl font-bold tracking-tight mb-2',
+          subtitle: 'text-lg text-muted dark:text-slate-400 mb-3',
+        }}
+      />
+      {description && (
+        <p class="text-base md:text-lg text-muted dark:text-slate-300 mb-4 leading-relaxed" set:html={description} data-i18n={i18n.description || ''} />
+      )}
+
+      {stats.length > 0 && (
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          {stats.map((stat) => (
+            <div class="text-center p-3 rounded-lg bg-muted/5 dark:bg-muted/10">
+              <div class="text-2xl md:text-3xl font-bold text-primary">{stat.amount}</div>
+              <div class="text-sm text-muted dark:text-slate-400 mt-0.5">{stat.title}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {features.length > 0 && (
+        <ul class="space-y-2 mb-4">
+          {features.map((feature, index) => (
+            <li class="flex items-start gap-3">
+              <Icon
+                name={feature.icon || 'tabler:check'}
+                class="flex-shrink-0 w-5 h-5 text-green-600 dark:text-green-500 mt-0.5"
+              />
+              <div>
+                <span class="font-medium dark:text-white" data-i18n={i18n.features?.[index] ? `${i18n.features[index]}.title` : ''}>{feature.title}</span>
+                <span class="text-muted dark:text-slate-400 ml-2" data-i18n={i18n.features?.[index] ? `${i18n.features[index]}.desc` : ''}>{feature.description}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {callToAction.length > 0 && (
+        <div class="flex flex-wrap gap-4">
+          {callToAction.map((action) => (
+            <Button {...action} />
+          ))}
+        </div>
+      )}
+    </div>
+
+    {image && (
+      <div class="md:basis-1/2">
+        <div class="relative">
+          <div class="absolute -inset-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl blur-2xl opacity-20"></div>
+          <div class="relative rounded-2xl overflow-hidden shadow-xl">
+            {typeof image === 'string' ? (
+              <img src={image} alt={imageAlt || title} class="w-full h-auto object-cover" loading="lazy" />
+            ) : (
+              <Image
+                class="w-full h-auto object-cover"
+                widths={[400, 768, 1024]}
+                sizes="(max-width: 768px) 100vw, 50vw"
+                format="webp"
+                loading="lazy"
+                alt={imageAlt || title}
+                {...image}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+</WidgetWrapper>

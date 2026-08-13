@@ -1,0 +1,123 @@
+---
+import { translations } from '~/utils/i18n';
+---
+
+<button
+  id="lang-toggle"
+  type="button"
+  class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md text-gray-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition-colors cursor-pointer"
+  aria-label="Switch language"
+>
+  <span class="lang-label-zh">中</span>
+  <span class="lang-label-en hidden">EN</span>
+  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M2 12h20" />
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+  </svg>
+</button>
+
+<!-- 注入翻译数据到全局（仅首次加载执行一次） -->
+<script is:inline define:vars={{ translations }}>
+  window.__ylgTranslations = translations;
+</script>
+
+<!-- 使用 astro:page-load 事件，确保每次 View Transitions 导航后重新初始化 -->
+<script>
+  const STORAGE_KEY = 'ylg-lang';
+
+  function getI18nVars() {
+    try {
+      const raw = document.body.getAttribute('data-i18n-vars');
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function applyVars(text, vars) {
+    if (!vars) return text;
+    return text.replace(/\{(\w+)\}/g, function (match, key) {
+      return vars[key] !== undefined ? String(vars[key]) : match;
+    });
+  }
+
+  function updateTextNodes(el, newText) {
+    for (let i = el.childNodes.length - 1; i >= 0; i--) {
+      if (el.childNodes[i].nodeType === Node.TEXT_NODE) {
+        el.removeChild(el.childNodes[i]);
+      }
+    }
+    const textNode = document.createTextNode(newText);
+    if (el.firstChild) {
+      el.insertBefore(textNode, el.firstChild);
+    } else {
+      el.appendChild(textNode);
+    }
+  }
+
+  function applyLang(lang) {
+    const translationsData = window.__ylgTranslations;
+    if (!translationsData) return;
+    const dict = translationsData[lang] || translationsData['zh'];
+    const vars = getI18nVars();
+
+    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+      const key = el.getAttribute('data-i18n');
+      if (key && dict[key]) {
+        if (el.children.length === 0) {
+          el.textContent = applyVars(dict[key], vars);
+        } else {
+          updateTextNodes(el, applyVars(dict[key], vars));
+        }
+      }
+    });
+
+    document.querySelectorAll('[data-i18n-html]').forEach(function (el) {
+      const key = el.getAttribute('data-i18n-html');
+      if (key && dict[key]) {
+        el.innerHTML = applyVars(dict[key], vars);
+      }
+    });
+
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(function (el) {
+      const key = el.getAttribute('data-i18n-placeholder');
+      if (key && dict[key]) {
+        el.setAttribute('placeholder', applyVars(dict[key], vars));
+      }
+    });
+
+    document.documentElement.setAttribute('lang', lang === 'en' ? 'en' : 'zh-CN');
+
+    const btn = document.getElementById('lang-toggle');
+    if (btn) {
+      const zhLabel = btn.querySelector('.lang-label-zh');
+      const enLabel = btn.querySelector('.lang-label-en');
+      if (lang === 'en') {
+        zhLabel?.classList.add('hidden');
+        enLabel?.classList.remove('hidden');
+      } else {
+        zhLabel?.classList.remove('hidden');
+        enLabel?.classList.add('hidden');
+      }
+    }
+  }
+
+  function toggleLang() {
+    const current = localStorage.getItem(STORAGE_KEY) || 'zh';
+    const next = current === 'zh' ? 'en' : 'zh';
+    localStorage.setItem(STORAGE_KEY, next);
+    applyLang(next);
+  }
+
+  // astro:page-load 在首次加载和每次 View Transitions 导航后触发
+  document.addEventListener('astro:page-load', function () {
+    const savedLang = localStorage.getItem(STORAGE_KEY) || 'zh';
+    applyLang(savedLang);
+
+    const btn = document.getElementById('lang-toggle');
+    if (btn) {
+      btn.addEventListener('click', toggleLang);
+    }
+  });
+</script>

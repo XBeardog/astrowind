@@ -1,0 +1,52 @@
+name: Deploy Factory Site
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-website:
+    name: Deploy Website (主站)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: website/package-lock.json
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: 'astrowind'
+          directory: website/dist
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-admin:
+    name: Deploy Admin Panel (管理端)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: 'astrowind-admin'
+          directory: admin-panel
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

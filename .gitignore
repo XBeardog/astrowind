@@ -1,0 +1,11 @@
+node_modules/
+.wrangler/
+dist/
+.output/
+.env
+.env.production
+.DS_Store
+*.log
+.vscode/
+pnpm-lock.yaml
+.astro

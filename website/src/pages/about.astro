@@ -1,0 +1,208 @@
+---
+import Hero from '~/components/widgets/Hero.astro';
+import Stats from '~/components/widgets/Stats.astro';
+import Content from '~/components/widgets/Content.astro';
+import Steps2 from '~/components/widgets/Steps2.astro';
+import CallToAction from '~/components/widgets/CallToAction.astro';
+import Layout from '~/layouts/PageLayout.astro';
+import {
+  getMoldYears,
+  getInjectionYears,
+  moldYearsLabel,
+  injectionYearsLabel,
+  COMPANY_FOUNDATION_YEAR,
+  INJECTION_BUSINESS_START_YEAR,
+} from '~/utils/utils';
+
+const moldYears = getMoldYears();
+const injectionYears = getInjectionYears();
+
+const i18nVars = {
+  years: String(moldYears),
+  moldYears: String(moldYears),
+  injectionYears: String(injectionYears),
+  foundationYear: String(COMPANY_FOUNDATION_YEAR),
+  injectionStartYear: String(INJECTION_BUSINESS_START_YEAR),
+};
+
+const metadata = {
+  title: '关于我们',
+};
+---
+
+<Layout metadata={metadata}>
+  <script is:inline define:vars={{ i18nVars }}>
+    document.body.setAttribute('data-i18n-vars', JSON.stringify(i18nVars));
+  </script>
+
+  <!-- Hero Widget ******************* -->
+
+  <Hero
+    tagline="关于溢隆"
+    title="东莞市溢隆模具有限公司"
+    subtitle={`深耕模具制造${moldYears}年，集模具设计制造、注塑成型于一体的模塑一体化源头工厂`}
+    i18n={{
+      tagline: 'about.hero.tagline',
+      title: 'about.hero.title',
+      subtitle: 'about.hero.subtitle',
+    }}
+    image={{
+      src: 'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?w=1600&h=900&fit=crop',
+      alt: '溢隆模具工厂',
+    }}
+  />
+
+  <!-- Stats Widget ****************** -->
+
+  <Stats
+    stats={[
+      { amount: moldYearsLabel(), title: '模具制造经验', icon: 'tabler:calendar' },
+      { amount: injectionYearsLabel(), title: '注塑生产经验', icon: 'tabler:robot' },
+      { amount: '自主', title: '工序自主完成', icon: 'tabler:settings-2' },
+      { amount: '全吨位', title: '注塑设备覆盖', icon: 'tabler:package' },
+    ]}
+    i18n={{
+      stats: ['about.stats.s1', 'about.stats.s2', 'about.stats.s3', 'about.stats.s4'],
+      amounts: ['', '', 'about.stats.amount.s3', 'about.stats.amount.s4'],
+    }}
+  />
+
+  <!-- Content Widget **************** -->
+
+  <Content
+    tagline="企业简介"
+    title="模塑一体化源头工厂"
+    content={`我司${COMPANY_FOUNDATION_YEAR}年成立，深耕模具制造${moldYears}年，${INJECTION_BUSINESS_START_YEAR}年拓展注塑业务，拥有${injectionYears}年注塑生产经验，是一家集模具设计制造、注塑成型于一体的模塑一体化源头工厂。公司产业链成熟完善，长期服务多家外贸公司，产品远销美国、俄罗斯等海外地区；同时为国内上市公司提供定制化模具与注塑配套服务，品质与交付能力备受市场认可。工厂可自主完成绝大部分制作工序，全程自控进度与质量，主打结构件、包胶、大小型常规模具定制，可承接绝大多数工业模具及配套注塑生产订单。`}
+    i18n={{
+      tagline: 'about.content.tagline',
+      title: 'about.content.title',
+      content: 'about.content.desc',
+      items: ['about.content.i1', 'about.content.i2', 'about.content.i3', 'about.content.i4'],
+    }}
+    columns={2}
+    items={[
+      {
+        title: `${COMPANY_FOUNDATION_YEAR}年成立深耕模具`,
+        description: `${moldYears}余年专注模具设计与制造，工艺成熟稳定`,
+        icon: 'tabler:calendar',
+      },
+      {
+        title: `${INJECTION_BUSINESS_START_YEAR}年拓展注塑业务`,
+        description: '延伸产业链，实现模塑一体化生产交付',
+        icon: 'tabler:robot',
+      },
+      {
+        title: '产品远销美国俄罗斯',
+        description: '长期服务外贸客户，品质获得海外市场认可',
+        icon: 'tabler:world',
+      },
+      {
+        title: '服务国内上市公司',
+        description: '提供定制化模具与注塑配套，交付能力备受信赖',
+        icon: 'tabler:building',
+      },
+    ]}
+    image={{
+      src: 'https://images.unsplash.com/photo-1565793298595-6a879b1d9492?w=800&h=800&fit=crop',
+      alt: '模具产品展示',
+    }}
+  />
+
+  <!-- Content Widget (Reversed) ****** -->
+
+  <Content
+    tagline="设备实力"
+    title="自有独立模房 配套设备充足"
+    isReversed={true}
+    i18n={{
+      tagline: 'about.equip.tagline',
+      title: 'about.equip.title',
+      items: ['about.equip.i1', 'about.equip.i2', 'about.equip.i3', 'about.equip.i4'],
+    }}
+    columns={2}
+    items={[
+      {
+        title: '模房',
+        description:
+          'CNC加工设备、火花机、配套抛光工作台、钻床、磨床',
+        icon: 'tabler:settings-2',
+      },
+      {
+        title: '注塑部',
+        description: '全吨位覆盖注塑机，适配各类大小塑胶产品成型',
+        icon: 'tabler:robot',
+      },
+      {
+        title: '人员配置',
+        description: '完整团队覆盖模具设计、CNC编程、机台操作、抛光、钳工全工序',
+        icon: 'tabler:users',
+      },
+      {
+        title: '配件储备',
+        description: '模具配件储备齐全，修模、加工效率高',
+        icon: 'tabler:package',
+      },
+    ]}
+    image={{
+      src: 'https://images.unsplash.com/photo-1565043666747-69f6646db940?w=800&h=800&fit=crop',
+      alt: '模具加工设备',
+    }}
+  />
+
+  <!-- Steps2 Widget ***************** -->
+
+  <Steps2
+    title="企业文化"
+    subtitle="精工务实、品质为本、诚信共赢、持续精进"
+    i18n={{
+      title: 'about.culture.title',
+      subtitle: 'about.culture.subtitle',
+      items: ['about.culture.i1', 'about.culture.i2', 'about.culture.i3', 'about.culture.i4'],
+    }}
+    items={[
+      {
+        title: '对内：深耕工艺，夯实实业根基',
+        description:
+          '搭建成熟技术生产团队，持续迭代工艺、传承加工经验，严控模具加工、注塑成型全流程标准',
+        icon: 'tabler:settings-2',
+      },
+      {
+        title: '对外：诚信服务，聚力合作共赢',
+        description: '以客户定制需求为核心，精准匹配各类模具加工需求，平衡品质、交期与性价比',
+        icon: 'tabler:headset',
+      },
+      {
+        title: '品质为本',
+        description: '依托全工序自主可控优势，从源头稳定产品品质、保障准时交付',
+        icon: 'tabler:shield-check',
+      },
+      {
+        title: '持续精进',
+        description: '多年深耕国内外市场，依靠稳定产品与定制化服务，维持长期稳定合作',
+        icon: 'tabler:bulb',
+      },
+    ]}
+  />
+
+  <!-- CallToAction Widget *********** -->
+
+  <CallToAction
+    tagline="下一页"
+    title="联系我们"
+    subtitle="无论您有开模、注塑还是定制需求，我们的专业团队随时为您服务"
+    i18n={{
+      tagline: 'about.cta.tagline',
+      title: 'about.cta.title',
+      subtitle: 'about.cta.subtitle',
+      actions: ['about.cta.btn'],
+    }}
+    actions={[
+      {
+        variant: 'primary',
+        text: '立即询盘',
+        href: '/contact',
+        icon: 'tabler:arrow-right',
+      },
+    ]}
+  />
+</Layout>

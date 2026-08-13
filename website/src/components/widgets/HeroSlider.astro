@@ -1,0 +1,244 @@
+---
+import Button from '~/components/ui/Button.astro';
+
+export interface Slide {
+  title: string;
+  subtitle?: string;
+  image: string;
+  alt?: string;
+  actions?: Array<{
+    variant?: 'primary' | 'secondary' | 'tertiary' | 'link';
+    text: string;
+    href: string;
+    target?: '_blank' | '_self';
+    icon?: string;
+  }>;
+}
+
+export interface Props {
+  id?: string;
+  slides: Slide[];
+  interval?: number;
+  i18n?: Array<{ title?: string; subtitle?: string }>;
+}
+
+const { id, slides, interval = 5000, i18n = [] } = Astro.props;
+const slideCount = slides.length;
+---
+
+<section
+  class="relative w-full not-prose max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8"
+  {...id ? { id } : {}}
+  data-slider
+  data-interval={interval}
+  data-slide-count={slideCount}
+  aria-roledescription="carousel"
+>
+  <div class="relative h-[200px] sm:h-[260px] md:h-[320px] lg:h-[380px]">
+    {
+      slides.map((slide, index) => (
+        <div
+          class="slide-item absolute top-0 left-1/2 w-[72%] h-full transition-all duration-700 ease-out"
+          data-index={index}
+          aria-roledescription="slide"
+          aria-label={`${index + 1} / ${slideCount}`}
+          aria-hidden={index !== 0}
+        >
+          <div class="relative w-full h-full overflow-hidden rounded-2xl shadow-xl">
+            <img
+              src={slide.image}
+              alt={slide.alt || slide.title}
+              class="absolute inset-0 w-full h-full object-cover"
+              loading={index === 0 ? 'eager' : 'lazy'}
+              fetchpriority={index === 0 ? 'high' : 'auto'}
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center max-w-xl mx-auto px-4">
+                {slide.title && (
+                  <h2
+                    class="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2"
+                    set:html={slide.title}
+                    data-i18n={i18n[index]?.title || ''}
+                  />
+                )}
+                {slide.subtitle && (
+                  <p
+                    class="text-sm sm:text-base text-white/90 mb-4 max-w-md mx-auto"
+                    set:html={slide.subtitle}
+                    data-i18n={i18n[index]?.subtitle || ''}
+                  />
+                )}
+                {slide.actions && slide.actions.length > 0 && (
+                  <div class="flex flex-wrap justify-center gap-3">
+                    {slide.actions.map((action) => (
+                      <Button {...action} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ))
+    }
+
+    {
+      slideCount > 1 && (
+        <>
+          <button
+            type="button"
+            class="absolute left-0 top-1/2 -translate-y-1/2 z-40 flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/30 hover:bg-white/50 text-white transition-colors backdrop-blur-sm shadow-lg"
+            data-action="prev"
+            aria-label="上一张"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width={2}>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            class="absolute right-0 top-1/2 -translate-y-1/2 z-40 flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/30 hover:bg-white/50 text-white transition-colors backdrop-blur-sm shadow-lg"
+            data-action="next"
+            aria-label="下一张"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width={2}>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          <div class="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2">
+            {
+              slides.map((_, index) => (
+                <button
+                  type="button"
+                  class="dot w-2 h-2 rounded-full transition-all duration-300"
+                  data-slide-index={index}
+                  aria-label={`跳转到第 ${index + 1} 张`}
+                />
+              ))
+            }
+          </div>
+        </>
+      )
+    }
+  </div>
+</section>
+
+<style is:global>
+  .slide-item {
+    opacity: 0;
+    pointer-events: none;
+    filter: blur(6px);
+    transform: translateX(-50%) scale(0.9);
+  }
+  .slide-item.is-active {
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 30;
+    transform: translateX(-50%) scale(1);
+    filter: blur(0);
+  }
+  .slide-item.is-prev {
+    opacity: 0.7;
+    z-index: 20;
+    transform: translateX(-74%) scale(0.9);
+    filter: blur(5px);
+  }
+  .slide-item.is-next {
+    opacity: 0.7;
+    z-index: 20;
+    transform: translateX(-26%) scale(0.9);
+    filter: blur(5px);
+  }
+  .dot {
+    background: rgba(255, 255, 255, 0.5);
+  }
+  .dot.is-active {
+    background: #fff;
+    transform: scale(1.3);
+  }
+</style>
+
+<script is:inline data-astro-rerun>
+  const root = document.querySelector('[data-slider]');
+  if (root) {
+    const totalSlides = parseInt(root.dataset.slideCount || '0', 10);
+    const intervalMs = parseInt(root.dataset.interval || '5000', 10);
+
+    if (totalSlides > 1) {
+      let currentSlide = 0;
+      const slideItems = root.querySelectorAll('.slide-item');
+      const dots = root.querySelectorAll('.dot');
+
+      function updateClasses() {
+        slideItems.forEach((slide, i) => {
+          slide.classList.remove('is-active', 'is-prev', 'is-next');
+          const diff = (i - currentSlide + totalSlides) % totalSlides;
+          if (diff === 0) {
+            slide.classList.add('is-active');
+            slide.setAttribute('aria-hidden', 'false');
+          } else if (diff === totalSlides - 1) {
+            slide.classList.add('is-prev');
+            slide.setAttribute('aria-hidden', 'true');
+          } else if (diff === 1) {
+            slide.classList.add('is-next');
+            slide.setAttribute('aria-hidden', 'true');
+          } else {
+            slide.setAttribute('aria-hidden', 'true');
+          }
+        });
+        dots.forEach((dot, i) => {
+          dot.classList.toggle('is-active', i === currentSlide);
+        });
+      }
+
+      function goToSlide(index) {
+        currentSlide = (index + totalSlides) % totalSlides;
+        updateClasses();
+      }
+
+      function nextSlide() { goToSlide(currentSlide + 1); }
+      function prevSlide() { goToSlide(currentSlide - 1); }
+
+      let autoplayInterval;
+
+      function startAutoplay() {
+        stopAutoplay();
+        autoplayInterval = setInterval(nextSlide, intervalMs);
+      }
+
+      function stopAutoplay() {
+        if (autoplayInterval) clearInterval(autoplayInterval);
+      }
+
+      root.addEventListener('mouseenter', stopAutoplay);
+      root.addEventListener('mouseleave', startAutoplay);
+
+      root.querySelectorAll('[data-action="next"]').forEach((btn) => {
+        btn.addEventListener('click', () => { nextSlide(); startAutoplay(); });
+      });
+
+      root.querySelectorAll('[data-action="prev"]').forEach((btn) => {
+        btn.addEventListener('click', () => { prevSlide(); startAutoplay(); });
+      });
+
+      dots.forEach((dot) => {
+        dot.addEventListener('click', () => {
+          const idx = parseInt(dot.dataset.slideIndex || '0', 10);
+          goToSlide(idx);
+          startAutoplay();
+        });
+      });
+
+      root.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') { nextSlide(); startAutoplay(); }
+        else if (e.key === 'ArrowLeft') { prevSlide(); startAutoplay(); }
+      });
+
+      updateClasses();
+      startAutoplay();
+    }
+  }
+</script>

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>产品表单 | AstroWind Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <div id="app"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    if (!Auth.requireAuth()) throw new Error('Unauthorized');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('id');
+    const isEdit = !!productId;
+
+    const pageContent = App.initLayout(isEdit ? 'products' : 'new-product');
+
+    // 可选择的标签
+    const TAG_SUGGESTIONS = ['结构件', '紧固件', '包胶', '潮玩', '玩具', '大型壳体', '工业', '电子', '家电', '汽车', '医疗', '精密', '高透光', '耐高温', '高强度'];
+
+    async function loadForm() {
+      pageContent.innerHTML = `
+        <div class="mb-6">
+          <h1 class="text-2xl font-bold text-gray-800">${isEdit ? '编辑产品' : '新增产品'}</h1>
+          <p class="text-gray-500 mt-1">${isEdit ? '修改产品信息' : '创建一个新的产品'}</p>
+        </div>
+
+        <form id="product-form" class="bg-white rounded-xl shadow p-6 space-y-6 max-w-3xl">
+          <!-- 产品图片 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">产品图片 *</label>
+            <div class="flex gap-4">
+              <div id="image-preview" class="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                <span class="text-gray-400 text-sm">无图片</span>
+              </div>
+              <div class="flex-1 space-y-2">
+                <input type="text" id="image-url" placeholder="图片 URL"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                <div class="flex gap-2">
+                  <label class="px-3 py-2 border rounded-lg cursor-pointer hover:bg-gray-50 text-sm">
+                    📁 本地上传
+                    <input type="file" id="image-file" accept="image/*" class="hidden">
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 产品名称 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">产品名称 *</label>
+            <input type="text" id="product-name" required placeholder="如：精密结构件模具"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+
+          <!-- 产品描述 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">产品描述</label>
+            <textarea id="product-description" rows="4" placeholder="产品详细描述..."
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+          </div>
+
+          <!-- 产品参数 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">产品参数</label>
+            <div id="params-container" class="space-y-2"></div>
+            <button type="button" id="add-param" class="mt-2 text-sm text-blue-600 hover:underline">+ 添加参数</button>
+          </div>
+
+          <!-- 产品标签 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">产品标签</label>
+            <div id="tags-container" class="flex flex-wrap gap-2 mb-2"></div>
+            <input type="text" id="tag-input" placeholder="输入标签后按回车添加"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+            <div class="mt-2 flex flex-wrap gap-1">
+              ${TAG_SUGGESTIONS.map(t => `<button type="button" class="suggest-tag px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs" data-tag="${t}">${t}</button>`).join('')}
+            </div>
+          </div>
+
+          <!-- 排序和状态 -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">排序</label>
+              <input type="number" id="sort-order" value="0"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">上架状态</label>
+              <label class="flex items-center gap-2 mt-2">
+                <input type="checkbox" id="is-active" checked class="w-4 h-4 text-blue-600 rounded">
+                <span class="text-sm">上架</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 按钮 -->
+          <div class="flex gap-3 pt-4 border-t">
+            <button type="submit" id="submit-btn"
+              class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition">
+              ${isEdit ? '保存修改' : '创建产品'}
+            </button>
+            <button type="button" onclick="window.location.href='products.html'"
+              class="px-6 py-3 border hover:bg-gray-50 rounded-lg transition">
+              取消
+            </button>
+          </div>
+        </form>
+      `;
+
+      // 参数管理
+      const paramsContainer = document.getElementById('params-container');
+      const addParamBtn = document.getElementById('add-param');
+      
+      function addParamRow(key = '', value = '') {
+        const row = document.createElement('div');
+        row.className = 'flex gap-2';
+        row.innerHTML = `
+          <input type="text" placeholder="参数名" value="${key}" class="param-key flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+          <input type="text" placeholder="参数值" value="${value}" class="param-value flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+          <button type="button" class="remove-param px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg">✕</button>
+        `;
+        row.querySelector('.remove-param').onclick = () => row.remove();
+        paramsContainer.appendChild(row);
+      }
+
+      addParamBtn.onclick = () => addParamRow();
+
+      // 标签管理
+      const tagsContainer = document.getElementById('tags-container');
+      const tagInput = document.getElementById('tag-input');
+      let selectedTags = [];
+
+      function renderTags() {
+        tagsContainer.innerHTML = selectedTags.map((t, i) => `
+          <span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
+            ${t}
+            <button type="button" data-idx="${i}" class="remove-tag hover:text-blue-900">✕</button>
+          </span>
+        `).join('');
+        tagsContainer.querySelectorAll('.remove-tag').forEach(btn => {
+          btn.onclick = () => {
+            selectedTags.splice(parseInt(btn.dataset.idx), 1);
+            renderTags();
+          };
+        });
+      }
+
+      tagInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && tagInput.value.trim()) {
+          selectedTags.push(tagInput.value.trim());
+          tagInput.value = '';
+          renderTags();
+        }
+      });
+
+      document.querySelectorAll('.suggest-tag').forEach(btn => {
+        btn.onclick = () => {
+          const tag = btn.dataset.tag;
+          if (!selectedTags.includes(tag)) {
+            selectedTags.push(tag);
+            renderTags();
+          }
+        };
+      });
+
+      // 图片上传
+      const imageUrlInput = document.getElementById('image-url');
+      const imageFileInput = document.getElementById('image-file');
+      const imagePreview = document.getElementById('image-preview');
+
+      function updatePreview(url) {
+        if (url) {
+          imagePreview.innerHTML = `<img src="${url}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<span class=text-gray-400 text-sm>加载失败</span>'">`;
+        } else {
+          imagePreview.innerHTML = '<span class="text-gray-400 text-sm">无图片</span>';
+        }
+      }
+
+      imageUrlInput.addEventListener('input', (e) => updatePreview(e.target.value));
+
+      imageFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+          App.toast('正在上传...', 'info');
+          const result = await API.upload(file);
+          imageUrlInput.value = result.data.url;
+          updatePreview(result.data.url);
+          App.toast('上传成功', 'success');
+        } catch (err) {
+          App.toast('上传失败: ' + err.message, 'error');
+        }
+      });
+
+      // 编辑模式：加载现有数据
+      if (isEdit) {
+        try {
+          const result = await API.products.get(parseInt(productId));
+          const p = result.data;
+          imageUrlInput.value = p.image_url || '';
+          updatePreview(p.image_url);
+          document.getElementById('product-name').value = p.product_name || '';
+          document.getElementById('product-description').value = p.product_description || '';
+          document.getElementById('sort-order').value = p.sort_order || 0;
+          document.getElementById('is-active').checked = p.is_active === 1;
+
+          // 参数
+          if (p.product_parameters) {
+            const params = typeof p.product_parameters === 'string' ? JSON.parse(p.product_parameters) : p.product_parameters;
+            if (params && typeof params === 'object') {
+              Object.entries(params).forEach(([k, v]) => addParamRow(k, String(v)));
+            }
+          }
+
+          // 标签
+          if (p.product_tags) {
+            selectedTags = Array.isArray(p.product_tags) ? p.product_tags : (typeof p.product_tags === 'string' ? JSON.parse(p.product_tags) : []);
+            renderTags();
+          }
+        } catch (err) {
+          App.toast('加载产品失败: ' + err.message, 'error');
+        }
+      }
+
+      // 提交
+      document.getElementById('product-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const submitBtn = document.getElementById('submit-btn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = '保存中...';
+
+        // 收集参数
+        const parameters = {};
+        paramsContainer.querySelectorAll('.param-key').forEach((keyEl, i) => {
+          const valueEl = paramsContainer.querySelectorAll('.param-value')[i];
+          if (keyEl.value.trim()) {
+            parameters[keyEl.value.trim()] = valueEl.value.trim();
+          }
+        });
+
+        const formData = {
+          image_url: imageUrlInput.value.trim(),
+          product_name: document.getElementById('product-name').value.trim(),
+          product_description: document.getElementById('product-description').value.trim(),
+          product_parameters: parameters,
+          product_tags: selectedTags,
+          sort_order: parseInt(document.getElementById('sort-order').value) || 0,
+          is_active: document.getElementById('is-active').checked,
+        };
+
+        try {
+          if (isEdit) {
+            await API.products.update(parseInt(productId), formData);
+            App.toast('保存成功', 'success');
+          } else {
+            await API.products.create(formData);
+            App.toast('创建成功', 'success');
+          }
+          setTimeout(() => window.location.href = 'products.html', 1000);
+        } catch (err) {
+          App.toast('保存失败: ' + err.message, 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = isEdit ? '保存修改' : '创建产品';
+        }
+      });
+    }
+
+    loadForm();
+  </script>
+</body>
+</html>

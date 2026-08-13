@@ -1,0 +1,163 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+
+import Hero from '~/components/widgets/Hero.astro';
+import FactoryIntro from '~/components/widgets/FactoryIntro.astro';
+import Content from '~/components/widgets/Content.astro';
+import CallToAction from '~/components/widgets/CallToAction.astro';
+import {
+  getMoldYears,
+  getInjectionYears,
+  COMPANY_FOUNDATION_YEAR,
+  INJECTION_BUSINESS_START_YEAR,
+} from '~/utils/utils';
+
+const moldYears = getMoldYears();
+const injectionYears = getInjectionYears();
+
+const i18nVars = {
+  years: String(moldYears),
+  moldYears: String(moldYears),
+  injectionYears: String(injectionYears),
+  foundationYear: String(COMPANY_FOUNDATION_YEAR),
+  injectionStartYear: String(INJECTION_BUSINESS_START_YEAR),
+};
+
+const metadata = {
+  title: '东莞市溢隆模具有限公司 — 模塑一体化源头工厂',
+  ignoreTitleTemplate: true,
+};
+---
+
+<Layout metadata={metadata}>
+  <script is:inline define:vars={{ i18nVars }}>
+    document.body.setAttribute('data-i18n-vars', JSON.stringify(i18nVars));
+  </script>
+
+  <Hero
+    tagline="YLG MOLD · 模塑一体化源头工厂"
+    title={`深耕模具制造${moldYears}年`}
+    subtitle="集模具设计制造、注塑成型于一体，自有独立模房，绝大部分工序自主完成，产品远销美国、俄罗斯等海外地区"
+    compact
+    i18n={{
+      tagline: 'index.hero.tagline',
+      title: 'index.hero.title',
+      subtitle: 'index.hero.subtitle',
+    }}
+  />
+
+  <FactoryIntro
+    id="about"
+    tagline="关于溢隆"
+    title="模塑一体化源头工厂"
+    description={`我司${COMPANY_FOUNDATION_YEAR}年成立，深耕模具制造${moldYears}年，${INJECTION_BUSINESS_START_YEAR}年拓展注塑业务，拥有${injectionYears}年注塑生产经验。公司产业链成熟完善，长期服务多家外贸公司，产品远销美国、俄罗斯等海外地区；同时为国内上市公司提供定制化模具与注塑配套服务，品质与交付能力备受市场认可。`}
+    image="https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=800&h=600&fit=crop"
+    imageAlt="溢隆模具工厂"
+    i18n={{
+      tagline: 'index.about.tagline',
+      title: 'index.about.title',
+      description: 'index.about.desc',
+      features: ['index.about.f1', 'index.about.f2', 'index.about.f3', 'index.about.f4'],
+    }}
+    features={[
+      { title: '模房绝大部分工序自主完成', description: '自有独立模房，减少外协风险', icon: 'tabler:check' },
+      { title: '全吨位注塑设备覆盖', description: '全吨位注塑机满足不同需求', icon: 'tabler:check' },
+      { title: '完整技术团队全工序自主', description: '从模具设计到注塑成型一站完成', icon: 'tabler:check' },
+      { title: '国内外市场长期稳定合作', description: '服务外贸与国内上市公司客户', icon: 'tabler:check' },
+    ]}
+  />
+
+  <Content
+    id="products"
+    tagline="产品中心"
+    title="专业定制各类塑胶模具"
+    subtitle="模具设计、制造、注塑量产一站式服务，覆盖多种应用场景"
+    i18n={{
+      tagline: 'index.products.tagline',
+      title: 'index.products.title',
+      subtitle: 'index.products.subtitle',
+      items: ['index.products.i1', 'index.products.i2'],
+    }}
+    items={[
+      {
+        title: '精密模具设计',
+        description: '提供各类塑胶模具定制服务，满足不同行业客户需求',
+        icon: 'tabler:tool',
+      },
+      {
+        title: '模塑一体化交付',
+        description: '模具交付后可同步承接注塑量产，一站式完成开模到成品',
+        icon: 'tabler:package',
+      },
+    ]}
+    image={{
+      src: 'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?w=1200&h=800&fit=crop',
+      alt: '溢隆模具产品',
+    }}
+  />
+
+  <Content
+    isReversed
+    id="why-us"
+    tagline="核心优势"
+    title="为什么选择溢隆"
+    subtitle="模塑一体化源头工厂，全流程自主可控"
+    i18n={{
+      tagline: 'index.why.tagline',
+      title: 'index.why.title',
+      subtitle: 'index.why.subtitle',
+      items: ['index.why.i1', 'index.why.i2', 'index.why.i3', 'index.why.i4'],
+    }}
+    items={[
+      {
+        title: '绝大部分工序自主完成',
+        description: '自有独立模房与完整生产链条，关键工序自主把控，减少外协风险，确保品质与交付。',
+        icon: 'tabler:check',
+      },
+      {
+        title: '全吨位注塑设备梯队',
+        description: '全吨位注塑机覆盖多吨位区间，从小件到大壳体均可适配，灵活应对不同产品需求。',
+        icon: 'tabler:check',
+      },
+      {
+        title: '完整团队全流程自主',
+        description: '从模具设计、加工到注塑成型一站完成，沟通成本低，响应速度快。',
+        icon: 'tabler:check',
+      },
+      {
+        title: '国内外市场长期认可',
+        description: '产品远销美国、俄罗斯等地区，长期服务外贸企业及国内上市公司。',
+        icon: 'tabler:check',
+      },
+    ]}
+    image={{
+      src: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop',
+      alt: '溢隆模具品质承诺',
+    }}
+  >
+    <Fragment slot="content">
+      <h3 class="text-2xl font-bold tracking-tight dark:text-white sm:text-3xl mb-2" data-i18n="index.why.content.title">模塑一体 · 源头交付</h3>
+      <span data-i18n="index.why.content.desc">从开模到注塑成型，溢隆以{moldYears}年模具经验为品质保障。</span>
+    </Fragment>
+  </Content>
+
+  <CallToAction
+    tagline="下一页"
+    title="产品中心"
+    subtitle="查看所有产品，选择适合您的模具方案"
+    i18n={{
+      tagline: 'index.cta.tagline',
+      title: 'index.cta.title',
+      subtitle: 'index.cta.subtitle',
+      actions: ['index.cta.btn'],
+    }}
+    actions={[
+      {
+        variant: 'primary',
+        text: '查看产品中心',
+        href: '/products',
+        icon: 'tabler:arrow-right',
+      },
+    ]}
+  />
+</Layout>
