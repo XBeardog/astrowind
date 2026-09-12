@@ -1,7 +1,7 @@
 import type {
   Product, ProductForm,
   Category, CategoryForm,
-  GalleryImage, GalleryImageForm,
+  Moment, MomentForm,
   Inquiry, InquiryForm, InquiryReplyForm,
 } from './types';
 
@@ -224,67 +224,53 @@ export async function deleteCategory(db: D1Database, id: number) {
 }
 
 // ============================================================
-// 工厂相册
+// 工厂实拍（朋友圈式动态）
 // ============================================================
-export async function listGallery(
+export async function listMoments(
   db: D1Database,
-  opts: { activeOnly?: boolean; category?: string; limit?: number } = {}
+  opts: { activeOnly?: boolean; limit?: number } = {}
 ) {
-  const where: string[] = [];
+  const where = opts.activeOnly ? 'WHERE is_active=1' : '';
   const params: any[] = [];
-  if (opts.activeOnly) where.push('is_active=1');
-  if (opts.category) { where.push('category = ?'); params.push(opts.category); }
-  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const limit = opts.limit ? ' LIMIT ?' : '';
   if (opts.limit) params.push(opts.limit);
   return (
     await db
-      .prepare(`SELECT * FROM gallery_images ${whereSql} ORDER BY sort_order ASC, id DESC${limit}`)
+      .prepare(`SELECT * FROM moments ${where} ORDER BY created_at DESC, id DESC${limit}`)
       .bind(...params)
-      .all<GalleryImage>()
+      .all<Moment>()
   ).results;
 }
-export async function getGalleryImage(db: D1Database, id: number) {
-  return (await db.prepare('SELECT * FROM gallery_images WHERE id=?').bind(id).first<GalleryImage>()) || null;
+export async function getMoment(db: D1Database, id: number) {
+  return (await db.prepare('SELECT * FROM moments WHERE id=?').bind(id).first<Moment>()) || null;
 }
-export async function createGalleryImage(db: D1Database, form: GalleryImageForm) {
+export async function createMoment(db: D1Database, form: MomentForm) {
   const r = await db
-    .prepare(
-      `INSERT INTO gallery_images (image_url, title, description, category, sort_order, is_active, created_at) VALUES (?,?,?,?,?,?,?)`
-    )
+    .prepare('INSERT INTO moments (content, images, is_active, created_at) VALUES (?,?,?,?)')
     .bind(
-      form.image_url,
-      form.title ?? null,
-      form.description ?? null,
-      form.category ?? 'factory',
-      form.sort_order ?? 0,
+      form.content ?? null,
+      JSON.stringify(form.images ?? []),
       toBool(form.is_active),
       now()
     )
     .run();
   return r.lastRowId;
 }
-export async function updateGalleryImage(db: D1Database, id: number, form: GalleryImageForm) {
-  const e = await getGalleryImage(db, id);
+export async function updateMoment(db: D1Database, id: number, form: MomentForm) {
+  const e = await getMoment(db, id);
   if (!e) return false;
   await db
     .prepare(
-      `UPDATE gallery_images SET
-         image_url   = COALESCE(?, image_url),
-         title       = COALESCE(?, title),
-         description = COALESCE(?, description),
-         category    = COALESCE(?, category),
-         sort_order  = COALESCE(?, sort_order),
-         is_active   = COALESCE(?, is_active),
-         updated_at  = ?
+      `UPDATE moments SET
+         content    = COALESCE(?, content),
+         images     = COALESCE(?, images),
+         is_active  = COALESCE(?, is_active),
+         updated_at = ?
        WHERE id = ?`
     )
     .bind(
-      form.image_url || null,
-      form.title ?? null,
-      form.description ?? null,
-      form.category ?? null,
-      form.sort_order ?? null,
+      form.content ?? null,
+      form.images ? JSON.stringify(form.images) : null,
       form.is_active === undefined ? null : toBool(form.is_active),
       now(),
       id
@@ -292,8 +278,8 @@ export async function updateGalleryImage(db: D1Database, id: number, form: Galle
     .run();
   return true;
 }
-export async function deleteGalleryImage(db: D1Database, id: number) {
-  const r = await db.prepare('DELETE FROM gallery_images WHERE id=?').bind(id).run();
+export async function deleteMoment(db: D1Database, id: number) {
+  const r = await db.prepare('DELETE FROM moments WHERE id=?').bind(id).run();
   return r.changes > 0;
 }
 
@@ -370,11 +356,11 @@ export async function statsAll(db: D1Database) {
   const p = await countProducts(db);
   const i = await countInquiries(db);
   const cat = await db.prepare('SELECT COUNT(*) c FROM categories WHERE is_active=1').first<{ c: number }>();
-  const gal = await db.prepare('SELECT COUNT(*) c FROM gallery_images WHERE is_active=1').first<{ c: number }>();
+  const mom = await db.prepare('SELECT COUNT(*) c FROM moments WHERE is_active=1').first<{ c: number }>();
   return {
     products: p,
     inquiries: i,
     categories: cat?.c ?? 0,
-    gallery_images: gal?.c ?? 0,
+    moments: mom?.c ?? 0,
   };
 }

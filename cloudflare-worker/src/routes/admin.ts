@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
 import type {
-  ProductForm, CategoryForm, GalleryImageForm, InquiryReplyForm,
+  ProductForm, CategoryForm, MomentForm, InquiryReplyForm,
 } from '../types';
 import {
   // 产品
@@ -9,8 +9,8 @@ import {
   toggleProductCarousel,
   // 分类
   listCategories, getCategory, createCategory, updateCategory, deleteCategory,
-  // 相册
-  listGallery, getGalleryImage, createGalleryImage, updateGalleryImage, deleteGalleryImage,
+  // 工厂实拍动态
+  listMoments, getMoment, createMoment, updateMoment, deleteMoment,
   // 询盘
   listInquiries, getInquiry, replyInquiry, deleteInquiry,
   // 统计
@@ -19,6 +19,17 @@ import {
 
 const adminRoute = new Hono<{ Bindings: Env }>();
 const parseJSON = (s?: string | null) => (s ? JSON.parse(s) : null);
+
+// 把 images（JSON 字符串）转成数组对外输出
+const parseImages = (s: any): string[] => {
+  try {
+    const v = typeof s === 'string' ? JSON.parse(s) : s;
+    return Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x) : [];
+  } catch {
+    return [];
+  }
+};
+const momentView = (m: any) => ({ ...m, images: parseImages(m.images) });
 
 // ============================================================
 // 统计
@@ -127,37 +138,40 @@ adminRoute.delete('/categories/:id', async (c) => {
 });
 
 // ============================================================
-// 工厂相册管理
+// 工厂实拍管理（朋友圈式动态，最新在前）
 // ============================================================
-adminRoute.get('/gallery', async (c) => {
-  const { category } = c.req.query();
-  const list = await listGallery(c.env.DB, { category });
-  return c.json({ data: list });
+adminRoute.get('/moments', async (c) => {
+  const list = await listMoments(c.env.DB);
+  return c.json({ data: list.map(momentView) });
 });
-adminRoute.get('/gallery/:id', async (c) => {
+adminRoute.get('/moments/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
-  const e = await getGalleryImage(c.env.DB, id);
+  const e = await getMoment(c.env.DB, id);
   if (!e) return c.json({ error: 'Not found' }, 404);
-  return c.json({ data: e });
+  return c.json({ data: momentView(e) });
 });
-adminRoute.post('/gallery', async (c) => {
-  const form = (await c.req.json()) as GalleryImageForm;
-  if (!form.image_url) return c.json({ error: 'image_url 必填' }, 400);
-  const id = await createGalleryImage(c.env.DB, form);
-  return c.json({ data: { id, ...form }, message: 'Gallery image created' }, 201);
+adminRoute.post('/moments', async (c) => {
+  const form = (await c.req.json()) as MomentForm;
+  const content = (form.content || '').trim();
+  const images = Array.isArray(form.images) ? form.images.filter(Boolean) : [];
+  if (!content && !images.length) {
+    return c.json({ error: '文案和图片至少填一项' }, 400);
+  }
+  const id = await createMoment(c.env.DB, { ...form, content, images });
+  return c.json({ data: { id, ...form, content, images }, message: 'Moment created' }, 201);
 });
-adminRoute.put('/gallery/:id', async (c) => {
+adminRoute.put('/moments/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
-  const form = (await c.req.json()) as GalleryImageForm;
-  const ok = await updateGalleryImage(c.env.DB, id, form);
+  const form = (await c.req.json()) as MomentForm;
+  const ok = await updateMoment(c.env.DB, id, form);
   if (!ok) return c.json({ error: 'Not found' }, 404);
-  return c.json({ message: 'Gallery image updated' });
+  return c.json({ message: 'Moment updated' });
 });
-adminRoute.delete('/gallery/:id', async (c) => {
+adminRoute.delete('/moments/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
-  const ok = await deleteGalleryImage(c.env.DB, id);
+  const ok = await deleteMoment(c.env.DB, id);
   if (!ok) return c.json({ error: 'Not found' }, 404);
-  return c.json({ message: 'Gallery image deleted' });
+  return c.json({ message: 'Moment deleted' });
 });
 
 // ============================================================

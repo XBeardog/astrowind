@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>工厂实拍管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    if (!Auth.requireAuth()) throw new Error('Unauthorized');
+    const root = App.initLayout('moments');
+
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    // 相对时间：与主站朋友圈风格保持一致
+    function relativeTime(input) {
+      if (!input) return '';
+      let s = String(input);
+      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) s = s.replace(' ', 'T') + 'Z';
+      const d = new Date(s);
+      if (isNaN(d.getTime())) return String(input);
+      const diff = Date.now() - d.getTime();
+      const min = Math.floor(diff / 60000);
+      if (min < 1) return '刚刚';
+      if (min < 60) return `${min}分钟前`;
+      const hour = Math.floor(min / 60);
+      if (hour < 24) return `${hour}小时前`;
+      const day = Math.floor(hour / 24);
+      if (day === 1) return '昨天';
+      if (day < 7) return `${day}天前`;
+      const p = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    }
+
+    // 当前编辑中的图片地址列表
+    let editingImages = [];
+
+    function imagesEditorHTML() {
+      return `
+        <div>
+          <label class="block text-sm mb-1">图片（可多选，最多 9 张）</label>
+          <div class="flex gap-2 mb-2">
+            <input id="f-image-url" class="flex-1 border rounded px-3 py-2" placeholder="粘贴图片地址后点击添加"/>
+            <button type="button" id="add-image-url" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded">添加</button>
+            <label class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded cursor-pointer whitespace-nowrap">上传
+              <input id="f-upload" type="file" accept="image/*" multiple class="hidden"/></label>
+          </div>
+          <div id="image-preview" class="grid grid-cols-4 gap-2"></div>
+        </div>`;
+    }
+
+    function renderImagePreview(container) {
+      const box = container.querySelector('#image-preview');
+      if (!box) return;
+      box.innerHTML = editingImages.length
+        ? editingImages.map((u, i) => `
+            <div class="relative group aspect-square rounded overflow-hidden border bg-gray-100">
+              <img src="${esc(u)}" class="w-full h-full object-cover"/>
+              <button type="button" data-remove="${i}" class="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-xs opacity-0 group-hover:opacity-100 transition">&times;</button>
+            </div>`).join('')
+        : '<div class="col-span-4 text-xs text-gray-400 py-2">暂无图片</div>';
+      box.querySelectorAll('[data-remove]').forEach(btn => btn.onclick = () => {
+        editingImages.splice(Number(btn.dataset.remove), 1);
+        renderImagePreview(container);
+      });
+    }
+
+    function openModal(item) {
+      item = item || {};
+      const isEdit = !!item.id;
+      editingImages = Array.isArray(item.images) ? item.images.slice() : [];
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4';
+      modal.innerHTML = `
+        <div class="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div class="p-5 border-b flex justify-between items-center">
+            <h3 class="font-semibold">${isEdit ? '编辑动态' : '发布动态'}</h3>
+            <button data-close class="text-gray-400 hover:text-gray-700 text-xl">&times;</button>
+          </div>
+          <div class="p-5 space-y-4">
+            <div>
+              <label class="block text-sm mb-1">文案</label>
+              <textarea id="f-content" rows="4" class="w-full border rounded px-3 py-2" placeholder="说点什么吧…比如：新到一台 1000 吨注塑机，今天正式投产！">${esc(item.content || '')}</textarea>
+            </div>
+            ${imagesEditorHTML()}
+            <label class="inline-flex items-center gap-2">
+              <input id="f-is_active" type="checkbox" ${item.is_active !== false ? 'checked' : ''} class="w-4 h-4"/>
+              <span class="text-sm">公开（在官网展示）</span>
+            </label>
+          </div>
+          <div class="p-5 border-t flex justify-end gap-2">
+            <button data-close class="px-4 py-2 border rounded hover:bg-gray-100">取消</button>
+            <button id="save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">保存</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+
+      renderImagePreview(modal);
+      modal.querySelectorAll('[data-close]').forEach(b => b.onclick = () => modal.remove());
+
+      modal.querySelector('#add-image-url').onclick = () => {
+        const input = modal.querySelector('#f-image-url');
+        const url = input.value.trim();
+        if (!url) return;
+        editingImages.push(url);
+        input.value = '';
+        renderImagePreview(modal);
+      };
+
+      modal.querySelector('#f-upload').onchange = async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+        for (const file of files) {
+          try {
+            App.toast('上传中...', 'info');
+            const r = await API.upload(file);
+            editingImages.push(r.data.url);
+            renderImagePreview(modal);
+          } catch (err) { App.toast('上传失败: ' + err.message, 'error'); }
+        }
+        App.toast('上传完成', 'success');
+        e.target.value = '';
+      };
+
+      modal.querySelector('#save-btn').onclick = async () => {
+        const form = {
+          content: modal.querySelector('#f-content').value.trim(),
+          images: editingImages.slice(),
+          is_active: modal.querySelector('#f-is_active').checked,
+        };
+        if (!form.content && !form.images.length) return App.toast('文案和图片至少填一项', 'error');
+        try {
+          if (isEdit) await API.moments.update(item.id, form);
+          else await API.moments.create(form);
+          App.toast('已保存', 'success');
+          modal.remove();
+          loadList();
+        } catch (err) { App.toast(err.message, 'error'); }
+      };
+    }
+
+    async function loadList() {
+      root.innerHTML = `
+        <div class="mb-6 flex justify-between items-center flex-wrap gap-3">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-800">工厂实拍</h1>
+            <p class="text-gray-500 mt-1">像发朋友圈一样发布动态，最新发布自动显示在官网页面最上方</p>
+          </div>
+          <button id="new-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">➕ 发布动态</button>
+        </div>
+        <div id="feed" class="max-w-2xl space-y-4">
+          <div class="text-center p-12 text-gray-400 bg-white rounded-xl shadow">加载中...</div>
+        </div>`;
+      document.getElementById('new-btn').onclick = () => openModal({});
+
+      try {
+        const r = await API.moments.list();
+        const list = r.data || [];
+        document.getElementById('feed').innerHTML = list.length ? list.map(m => {
+          const images = Array.isArray(m.images) ? m.images : [];
+          const cols = images.length === 1 ? 1 : (images.length === 2 || images.length === 4) ? 2 : 3;
+          return `
+          <div class="bg-white rounded-xl shadow p-4">
+            <div class="flex gap-3">
+              <div class="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold flex-none">溢</div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <span class="font-semibold text-blue-600">溢隆模具</span>
+                    <span class="text-xs ml-2 ${m.is_active ? 'text-green-600' : 'text-gray-400'}">${m.is_active ? '公开' : '未公开'}</span>
+                  </div>
+                  <div class="flex gap-2">
+                    <button data-edit="${m.id}" class="text-xs px-2 py-1 border rounded hover:bg-gray-100">编辑</button>
+                    <button data-del="${m.id}" class="text-xs px-2 py-1 border border-red-200 text-red-600 rounded hover:bg-red-50">删除</button>
+                  </div>
+                </div>
+                ${m.content ? `<p class="text-gray-800 mt-1 whitespace-pre-wrap break-words">${esc(m.content)}</p>` : ''}
+                ${images.length ? `<div class="grid gap-1.5 mt-2 max-w-sm" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">
+                  ${images.map(u => `<div class="aspect-square rounded overflow-hidden bg-gray-100"><img src="${esc(u)}" class="w-full h-full object-cover"/></div>`).join('')}
+                </div>` : ''}
+                <div class="text-xs text-gray-400 mt-2">${relativeTime(m.created_at)}</div>
+              </div>
+            </div>
+          </div>`;
+        }).join('') : '<div class="text-center p-12 text-gray-400 bg-white rounded-xl shadow">还没有动态，点击右上角发布第一条</div>';
+
+        document.querySelectorAll('[data-edit]').forEach(btn => btn.onclick = async () => {
+          const r = await API.moments.get(Number(btn.dataset.edit));
+          openModal({ ...r.data, is_active: r.data.is_active === 1 });
+        });
+        document.querySelectorAll('[data-del]').forEach(btn => btn.onclick = async () => {
+          if (!(await App.confirm('确认删除这条动态？'))) return;
+          await API.moments.delete(Number(btn.dataset.del));
+          App.toast('已删除', 'success');
+          loadList();
+        });
+      } catch (err) { App.toast(err.message, 'error'); }
+    }
+    loadList();
+  </script>
+</body>
+</html>

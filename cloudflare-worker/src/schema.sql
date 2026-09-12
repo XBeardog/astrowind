@@ -38,21 +38,19 @@ CREATE TABLE IF NOT EXISTS categories (
 CREATE INDEX IF NOT EXISTS idx_categories_active ON categories(is_active);
 
 -- ============================================================
--- 3. 工厂实拍 / 相册
+-- 3. 工厂实拍（朋友圈式动态）
+--    一条记录 = 一条动态：文字 + 多张图片（JSON 数组），按发布时间倒序展示
 -- ============================================================
-CREATE TABLE IF NOT EXISTS gallery_images (
+CREATE TABLE IF NOT EXISTS moments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  image_url TEXT NOT NULL,
-  title TEXT,
-  description TEXT,
-  category TEXT DEFAULT 'factory',   -- factory | equipment | product-show | team
-  sort_order INTEGER DEFAULT 0,
+  content TEXT,                      -- 动态文案
+  images TEXT,                       -- JSON 数组：["https://xxx/a.jpg", ...]
   is_active INTEGER DEFAULT 1,
-  created_at TEXT DEFAULT (datetime('now')),
+  created_at TEXT DEFAULT (datetime('now')),  -- 发布时间（最新在前）
   updated_at TEXT
 );
-CREATE INDEX IF NOT EXISTS idx_gallery_active   ON gallery_images(is_active);
-CREATE INDEX IF NOT EXISTS idx_gallery_category ON gallery_images(category);
+CREATE INDEX IF NOT EXISTS idx_moments_active  ON moments(is_active);
+CREATE INDEX IF NOT EXISTS idx_moments_created ON moments(created_at);
 
 -- ============================================================
 -- 4. 询盘 / 联系留言（用户从前端提交）

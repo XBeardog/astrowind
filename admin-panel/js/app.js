@@ -79,7 +79,7 @@ const App = {
           <a href="product-form.html" class="flex items-center gap-3 px-3 py-2 rounded-lg transition ${activePage === 'new-product' ? 'bg-blue-600' : 'hover:bg-gray-800'}">
             <span>➕</span><span>新增产品</span>
           </a>
-          <a href="gallery.html" class="flex items-center gap-3 px-3 py-2 rounded-lg transition ${activePage === 'gallery' ? 'bg-blue-600' : 'hover:bg-gray-800'}">
+          <a href="moments.html" class="flex items-center gap-3 px-3 py-2 rounded-lg transition ${activePage === 'moments' ? 'bg-blue-600' : 'hover:bg-gray-800'}">
             <span>🏭</span><span>工厂实拍</span>
           </a>
           <div class="mt-3 text-gray-500 uppercase text-xs tracking-wider px-3">运营</div>

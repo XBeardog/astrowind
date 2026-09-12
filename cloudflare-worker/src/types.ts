@@ -48,21 +48,20 @@ export type CategoryForm = Omit<Category, 'id' | 'created_at' | 'updated_at' | '
 };
 
 // ============================================================
-// 工厂相册
+// 工厂实拍（朋友圈式动态）
 // ============================================================
-export type GalleryImage = {
+export type Moment = {
   id?: number;
-  image_url: string;
-  title?: string;
-  description?: string;
-  category?: string;                 // 'factory' | 'equipment' | 'product-show' | 'team'
-  sort_order?: number;
+  content?: string;
+  images?: string;                   // DB 存储的 JSON 数组字符串
   is_active?: number;
   created_at?: string;
   updated_at?: string;
 };
 
-export type GalleryImageForm = Omit<GalleryImage, 'id' | 'created_at' | 'updated_at' | 'is_active'> & {
+export type MomentForm = {
+  content?: string;
+  images?: string[];                 // 前端传来的图片地址数组
   is_active?: boolean;
 };
 

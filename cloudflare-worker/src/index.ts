@@ -20,7 +20,7 @@ const app = new Hono<{ Bindings: Env }>();
 app.route('*', cors);
 
 // 公开接口（不需要认证）
-app.route('/api/products', productsRoute);       // 产品/分类/轮播/相册/询盘提交
+app.route('/api/products', productsRoute);       // 产品/分类/轮播/工厂动态/询盘提交
 app.route('/api/images', imagesRoute);          // 图片读取（从 R2 直接输出）
 app.route('/api/admin', loginRoute);            // /login /logout（注意只处理这两个路径，不挂其他 admin 路由）
 
@@ -31,7 +31,7 @@ app.get('/api/health', (c) => {
 
 // 管理端接口（需要认证）
 app.use('/api/admin/*', auth);
-app.route('/api/admin', adminRoute);            // /api/admin/products, /categories, /gallery, /inquiries, /stats
+app.route('/api/admin', adminRoute);            // /api/admin/products, /categories, /moments, /inquiries, /stats
 app.route('/api/admin/upload', uploadRoute);    // /api/admin/upload
 
 // 404

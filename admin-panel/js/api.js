@@ -71,16 +71,13 @@ const API = {
     delete: (id) => API.request(`/api/admin/categories/${id}`, { method: 'DELETE' }),
   },
 
-  // -------------------- 工厂相册 --------------------
-  gallery: {
-    list: (params = {}) => {
-      const query = new URLSearchParams(params).toString();
-      return API.request(`/api/admin/gallery${query ? '?' + query : ''}`);
-    },
-    get: (id) => API.request(`/api/admin/gallery/${id}`),
-    create: (data) => API.request('/api/admin/gallery', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => API.request(`/api/admin/gallery/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => API.request(`/api/admin/gallery/${id}`, { method: 'DELETE' }),
+  // -------------------- 工厂实拍动态（朋友圈式） --------------------
+  moments: {
+    list: () => API.request('/api/admin/moments'),
+    get: (id) => API.request(`/api/admin/moments/${id}`),
+    create: (data) => API.request('/api/admin/moments', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => API.request(`/api/admin/moments/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id) => API.request(`/api/admin/moments/${id}`, { method: 'DELETE' }),
   },
 
   // -------------------- 询盘 --------------------
@@ -121,9 +118,9 @@ const API = {
     categories: () => API.request('/api/products/categories/list'),
     carousel: (limit = 10) =>
       API.request(`/api/products/carousel/list?limit=${limit}`),
-    gallery: (params = {}) => {
+    moments: (params = {}) => {
       const query = new URLSearchParams(params).toString();
-      return API.request(`/api/products/gallery/list${query ? '?' + query : ''}`);
+      return API.request(`/api/products/moments/list${query ? '?' + query : ''}`);
     },
     submitInquiry: (data) =>
       API.request('/api/products/inquiries/submit', {

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
 import {
-  listProducts, getProduct, listCategories, listCarouselProducts, listGallery, createInquiry,
+  listProducts, getProduct, listCategories, listCarouselProducts, listMoments, createInquiry,
 } from '../db';
 import type { Category, InquiryForm, Product } from '../types';
 
@@ -117,15 +117,22 @@ productsRoute.get('/categories/list', async (c) => {
   return c.json({ data: list });
 });
 
-// ---------- 工厂相册（公开）----------
-productsRoute.get('/gallery/list', async (c) => {
-  const { category, limit, active_only } = c.req.query();
-  const list = await listGallery(c.env.DB, {
+// ---------- 工厂实拍动态（公开，朋友圈式，最新在前）----------
+productsRoute.get('/moments/list', async (c) => {
+  const { limit, active_only } = c.req.query();
+  const list = await listMoments(c.env.DB, {
     activeOnly: active_only === undefined ? true : active_only === '1' || active_only === 'true',
-    category,
     limit: limit ? parseInt(limit) : undefined,
   });
-  return c.json({ data: list });
+  const data = list.map((m) => {
+    let images: string[] = [];
+    try {
+      const v = typeof m.images === 'string' ? JSON.parse(m.images) : m.images;
+      if (Array.isArray(v)) images = v.filter((x) => typeof x === 'string' && x);
+    } catch {}
+    return { ...m, images };
+  });
+  return c.json({ data });
 });
 
 // ---------- 提交询盘（公开，带反垃圾简单校验）----------

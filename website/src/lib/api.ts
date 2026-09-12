@@ -36,7 +36,10 @@ export const API_BASE: string = (() => {
   return baseFromBrowser();
 })();
 
-export async function apiFetch<T = any>(path: string, init?: RequestInit): Promise<{ data: T; ok: boolean; error?: string }> {
+export async function apiFetch<T = any>(
+  path: string,
+  init?: RequestInit
+): Promise<{ data: T; ok: boolean; error?: string }> {
   const url = API_BASE + path;
   const opts: RequestInit = {
     headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
@@ -95,14 +98,13 @@ export interface Category {
   is_active?: 0 | 1;
 }
 
-export interface GalleryImage {
+export interface Moment {
   id: number;
-  image_url: string;
-  category: string; // factory / equipment / product-show / team
-  title?: string;
-  description?: string;
-  sort_order: number;
+  content?: string;
+  images: string[]; // 图片地址数组
   is_active?: 0 | 1;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export const publicApi = {
@@ -123,11 +125,12 @@ export const publicApi = {
   // 产品实拍轮播：固定轮播优先，不足 limit 随机补足
   carouselList: (limit = 10) => apiFetch<Product[]>(`/api/products/carousel/list?limit=${limit}`),
 
-  galleryList: (opts?: { category?: string; activeOnly?: boolean }) => {
+  // 工厂实拍动态（朋友圈式，最新在前）
+  momentsList: (opts?: { activeOnly?: boolean; limit?: number }) => {
     const q = new URLSearchParams();
-    if (opts?.category) q.set('category', opts.category);
+    if (opts?.limit) q.set('limit', String(opts.limit));
     if (opts?.activeOnly !== false) q.set('active_only', '1');
-    return apiFetch<GalleryImage[]>(`/api/products/gallery/list${q.toString() ? '?' + q : ''}`);
+    return apiFetch<Moment[]>(`/api/products/moments/list${q.toString() ? '?' + q : ''}`);
   },
 
   submitInquiry: (payload: {
