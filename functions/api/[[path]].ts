@@ -17,6 +17,8 @@ export const onRequest = async (context: any): Promise<Response> => {
   const headers = new Headers(request.headers);
   headers.delete('host');
   headers.delete('content-length');
+  // 告知后端真实站点 origin，便于后端生成浏览器可访问的绝对 URL（如图片地址）
+  headers.set('x-public-origin', url.origin);
 
   const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
 

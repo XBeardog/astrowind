@@ -4,6 +4,7 @@ import { productsRoute } from './routes/products';
 import { adminRoute } from './routes/admin';
 import { uploadRoute } from './routes/upload';
 import { loginRoute } from './routes/login';
+import { imagesRoute } from './routes/images';
 import { auth } from './auth';
 
 export type Env = {
@@ -12,8 +13,6 @@ export type Env = {
   KV: KVNamespace;
   ADMIN_USERNAME: string;
   ADMIN_PASSWORD: string;
-  R2_ACCOUNT_ID: string;
-  R2_PUBLIC_URL: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -22,6 +21,7 @@ app.route('*', cors);
 
 // 公开接口（不需要认证）
 app.route('/api/products', productsRoute);       // 产品/分类/轮播/相册/询盘提交
+app.route('/api/images', imagesRoute);          // 图片读取（从 R2 直接输出）
 app.route('/api/admin', loginRoute);            // /login /logout（注意只处理这两个路径，不挂其他 admin 路由）
 
 // 健康检查

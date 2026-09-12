@@ -44,7 +44,7 @@ wrangler d1 execute astrowind-db --file=./schema.sql
 
 ```bash
 # 在 Cloudflare Dashboard 创建 R2 bucket，命名为 astrowind-images
-# 绑定自定义域名后，文件可通过 https://pub-xxx.r2.dev/filename 访问
+# 无需开启 r2.dev 公网访问：图片由 Worker 的 /api/images/:fileName 从 R2 读取后输出
 ```
 
 ### 4. 创建 KV Namespace

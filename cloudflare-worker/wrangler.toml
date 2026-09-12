@@ -21,9 +21,7 @@ id = "9ccbdc7c35f74a4d9e64287210621d07"
 # 环境变量
 [vars]
 ADMIN_USERNAME = "admin"
-# R2 账号 ID，用于生成公网访问 URL
-R2_ACCOUNT_ID = "098e350ed3fb8953c6b8548ebc49bde4"
-# R2 公网访问地址（默认 r2.dev 域名，如有自定义域名可替换）
-R2_PUBLIC_URL = "https://pub-098e350ed3fb8953c6b8548ebc49bde4.r2.dev"
+# 图片统一由 Worker 的 /api/images/:fileName 从 R2 读取并输出，
+# 不再依赖 r2.dev 公网域名，因此无需配置 R2_PUBLIC_URL / R2_ACCOUNT_ID。
 # 密码需要在部署后通过 wrangler secret 设置
 # wrangler secret put ADMIN_PASSWORD

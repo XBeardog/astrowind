@@ -36,9 +36,11 @@ uploadRoute.post('/', async (c) => {
       },
     });
 
-    // 构造公网访问 URL
-    const publicUrl = c.env.R2_PUBLIC_URL || `https://pub-${c.env.R2_ACCOUNT_ID}.r2.dev`;
-    const url = `${publicUrl}/${fileName}`;
+    // 构造可访问的图片 URL：走 Worker 自身的 /api/images（同源 /api 代理）
+    // - 本地直连 Worker：使用请求自身的 origin（如 http://127.0.0.1:8787）
+    // - 线上经 Pages Function 代理：代理会带上 X-Public-Origin，保证返回站点域名而非 workers.dev
+    const origin = c.req.header('X-Public-Origin') || new URL(c.req.url).origin;
+    const url = `${origin.replace(/\/$/, '')}/api/images/${fileName}`;
 
     return c.json({
       data: {
