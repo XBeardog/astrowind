@@ -1,11 +1,14 @@
 // 配置
 const CONFIG = {
   // 后端 API 地址
+  // - 本地开发：直连本地 Worker（wrangler dev）
+  // - 线上：使用同源代理 /api/*，由 Cloudflare Pages Function（functions/api/[[path]].ts）
+  //   转发到后端 Worker。这样浏览器无需直连被 DNS 污染/封锁的 *.workers.dev 域名，也免去 CORS。
   API_BASE:
     window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1'
       ? 'http://127.0.0.1:8787'
-      : 'https://astrowind-worker.1900692808.workers.dev',
+      : '',
 };
 
 // API 请求封装
