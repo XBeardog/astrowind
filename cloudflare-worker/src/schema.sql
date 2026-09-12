@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS products (
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT,
   sort_order INTEGER DEFAULT 0,
-  is_active INTEGER DEFAULT 1
+  is_active INTEGER DEFAULT 1,
+  carousel_fixed INTEGER DEFAULT 0   -- 1=固定出现在产品实拍轮播，0=随机补位
 );
 CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active);
 CREATE INDEX IF NOT EXISTS idx_products_sort   ON products(sort_order);
@@ -37,25 +38,7 @@ CREATE TABLE IF NOT EXISTS categories (
 CREATE INDEX IF NOT EXISTS idx_categories_active ON categories(is_active);
 
 -- ============================================================
--- 3. 首页 Banner / 轮播图
--- ============================================================
-CREATE TABLE IF NOT EXISTS banners (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  image_url TEXT NOT NULL,
-  title TEXT,
-  subtitle TEXT,
-  link_url TEXT,
-  lang TEXT DEFAULT 'zh',          -- zh | en | all
-  sort_order INTEGER DEFAULT 0,
-  is_active INTEGER DEFAULT 1,
-  created_at TEXT DEFAULT (datetime('now')),
-  updated_at TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_banners_active ON banners(is_active);
-CREATE INDEX IF NOT EXISTS idx_banners_lang   ON banners(lang);
-
--- ============================================================
--- 4. 工厂实拍 / 相册
+-- 3. 工厂实拍 / 相册
 -- ============================================================
 CREATE TABLE IF NOT EXISTS gallery_images (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,7 +55,7 @@ CREATE INDEX IF NOT EXISTS idx_gallery_active   ON gallery_images(is_active);
 CREATE INDEX IF NOT EXISTS idx_gallery_category ON gallery_images(category);
 
 -- ============================================================
--- 5. 询盘 / 联系留言（用户从前端提交）
+-- 4. 询盘 / 联系留言（用户从前端提交）
 -- ============================================================
 CREATE TABLE IF NOT EXISTS inquiries (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

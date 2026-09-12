@@ -43,26 +43,24 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
           ${CARD('产品总数', '<span id="sk-0" class="skeleton">—</span>', '📦', 'bg-blue-100', 'products.html')}
           ${CARD('产品分类', '<span id="sk-1" class="skeleton">—</span>', '🗂️', 'bg-purple-100', 'categories.html')}
-          ${CARD('首页 Banner', '<span id="sk-2" class="skeleton">—</span>', '🖼️', 'bg-pink-100', 'banners.html')}
-          ${CARD('工厂图片', '<span id="sk-3" class="skeleton">—</span>', '🏭', 'bg-amber-100', 'gallery.html')}
+          ${CARD('工厂图片', '<span id="sk-2" class="skeleton">—</span>', '🏭', 'bg-amber-100', 'gallery.html')}
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          ${CARD('新询盘', '<span id="sk-4" class="skeleton">—</span>', '📨', 'bg-red-100', 'inquiries.html', { class: 'bg-red-600 text-white', text: 'new' })}
-          ${CARD('询盘总数', '<span id="sk-5" class="skeleton">—</span>', '📬', 'bg-cyan-100', 'inquiries.html')}
-          ${CARD('上架产品 / 总数', '<span id="sk-6" class="skeleton">—</span>', '✅', 'bg-green-100', 'products.html')}
+          ${CARD('新询盘', '<span id="sk-3" class="skeleton">—</span>', '📨', 'bg-red-100', 'inquiries.html', { class: 'bg-red-600 text-white', text: 'new' })}
+          ${CARD('询盘总数', '<span id="sk-4" class="skeleton">—</span>', '📬', 'bg-cyan-100', 'inquiries.html')}
+          ${CARD('上架产品 / 总数', '<span id="sk-5" class="skeleton">—</span>', '✅', 'bg-green-100', 'products.html')}
         </div>
 
         <div class="bg-white rounded-xl shadow p-6">
           <h2 class="text-lg font-semibold text-gray-800 mb-4">快捷入口</h2>
-          <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
             ${[
               ['➕', '新增产品', 'product-form.html', 'bg-blue-50 hover:bg-blue-100 text-blue-700'],
               ['🗂️', '管理分类', 'categories.html', 'bg-purple-50 hover:bg-purple-100 text-purple-700'],
-              ['🖼️', '编辑 Banner', 'banners.html', 'bg-pink-50 hover:bg-pink-100 text-pink-700'],
               ['🏭', '上传工厂图', 'gallery.html', 'bg-amber-50 hover:bg-amber-100 text-amber-700'],
               ['📨', '查看询盘', 'inquiries.html', 'bg-red-50 hover:bg-red-100 text-red-700'],
             ].map(([i, t, h, c]) => `
@@ -84,10 +82,7 @@
 
         const stats = await API.stats();
         const d = stats.data;
-        const map = { 0: d.products.total, 1: d.categories, 2: d.gallery_images, 3: d.gallery_images, 4: d.inquiries.new, 5: d.inquiries.total, 6: `${d.products.active} / ${d.products.total}` };
-        // Banner 总数单独拉一次
-        const banners = await API.banners.list();
-        map[2] = banners.data.length;
+        const map = { 0: d.products.total, 1: d.categories, 2: d.gallery_images, 3: d.inquiries.new, 4: d.inquiries.total, 5: `${d.products.active} / ${d.products.total}` };
         for (const [k, v] of Object.entries(map)) {
           const el = document.getElementById('sk-' + k);
           if (el) el.outerHTML = `<span>${v}</span>`;

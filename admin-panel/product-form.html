@@ -85,7 +85,7 @@
           </div>
 
           <!-- 排序和状态 -->
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-3 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">排序</label>
               <input type="number" id="sort-order" value="0"
@@ -96,6 +96,13 @@
               <label class="flex items-center gap-2 mt-2">
                 <input type="checkbox" id="is-active" checked class="w-4 h-4 text-blue-600 rounded">
                 <span class="text-sm">上架</span>
+              </label>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">产品实拍轮播</label>
+              <label class="flex items-center gap-2 mt-2">
+                <input type="checkbox" id="carousel-fixed" class="w-4 h-4 text-blue-600 rounded">
+                <span class="text-sm">固定展示</span>
               </label>
             </div>
           </div>
@@ -211,6 +218,7 @@
           document.getElementById('product-description').value = p.product_description || '';
           document.getElementById('sort-order').value = p.sort_order || 0;
           document.getElementById('is-active').checked = p.is_active === 1;
+          document.getElementById('carousel-fixed').checked = p.carousel_fixed === 1;
 
           // 参数
           if (p.product_parameters) {
@@ -255,6 +263,7 @@
           product_tags: selectedTags,
           sort_order: parseInt(document.getElementById('sort-order').value) || 0,
           is_active: document.getElementById('is-active').checked,
+          carousel_fixed: document.getElementById('carousel-fixed').checked,
         };
 
         try {

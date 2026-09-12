@@ -24,13 +24,14 @@ const fallbackSlides = [
   { title: '注塑生产车间', subtitle: '全吨位覆盖注塑机，适配各类大小塑胶产品成型', image: 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=1920&h=1080&fit=crop', alt: '注塑车间' },
 ];
 
-// SSR 阶段把图片按 category 聚合（兜底 + SSR 数据合并，客户端再覆盖）
+// 相册分类元信息（顺序即 tab 顺序）
 const CAT_META: Record<string, { tab: string; icon: string }> = {
-  equipment:    { tab: '设备展示',   icon: 'tabler:photo' },
-  factory:      { tab: '工厂环境',   icon: 'tabler:building-factory' },
+  factory:        { tab: '工厂环境', icon: 'tabler:building-factory' },
+  equipment:      { tab: '设备展示', icon: 'tabler:photo' },
   'product-show': { tab: '产品实拍', icon: 'tabler:box' },
-  team:         { tab: '团队风采',   icon: 'tabler:users' },
+  team:           { tab: '团队风采', icon: 'tabler:users' },
 };
+const TAB_ORDER = Object.keys(CAT_META);
 
 function groupByCat(list: any[]) {
   const g: Record<string, any[]> = {};
@@ -42,6 +43,8 @@ function groupByCat(list: any[]) {
 }
 
 const SSR_GROUPED = groupByCat(SSR_GALLERY);
+// 产品实拍 tab 始终展示（承载产品轮播），其它分类有图才展示
+const SSR_TAB_KEYS = TAB_ORDER.filter((k) => SSR_GROUPED[k]?.length || k === 'product-show');
 const hasSSRData = SSR_GALLERY.length > 0;
 ---
 
@@ -59,7 +62,7 @@ const hasSSRData = SSR_GALLERY.length > 0;
     {hasSSRData ? (
       <div>
         <div class="flex justify-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-800 flex-wrap">
-          {Object.keys(CAT_META).filter((k) => SSR_GROUPED[k]?.length).map((k, i) => (
+          {SSR_TAB_KEYS.map((k, i) => (
             <button
               class="tab-btn px-6 py-3 text-base font-semibold border-b-2 transition-colors"
               class:list={[i === 0 ? 'border-primary text-primary' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-primary']}
@@ -67,27 +70,34 @@ const hasSSRData = SSR_GALLERY.length > 0;
             >
               <Icon name={CAT_META[k].icon} class="w-5 h-5 inline-block mr-1.5 -mt-0.5" />
               <span>{CAT_META[k].tab}</span>
-              <span class="ml-1 text-xs opacity-60">({SSR_GROUPED[k].length})</span>
+              {SSR_GROUPED[k]?.length ? <span class="ml-1 text-xs opacity-60">({SSR_GROUPED[k].length})</span> : null}
             </button>
           ))}
         </div>
-        {Object.keys(CAT_META).filter((k) => SSR_GROUPED[k]?.length).map((k, i) => (
+        {SSR_TAB_KEYS.map((k, i) => (
           <div id={`tab-${k}`} class:list={['tab-content', i !== 0 && 'hidden']}>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {SSR_GROUPED[k].map((g: any) => (
-                <div class="group relative overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-                  <div class="aspect-[4/3] overflow-hidden">
-                    <img src={g.image_url} alt={g.title || '工厂图片'} class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy"/>
-                  </div>
-                  <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div class="absolute bottom-0 left-0 right-0 p-4 text-white">
-                      {g.title && <h3 class="text-lg font-semibold mb-0.5">{g.title}</h3>}
-                      {g.description && <p class="text-sm text-white/80">{g.description}</p>}
+            {k === 'product-show' && (
+              <div data-product-carousel>
+                <p class="text-center text-sm text-muted dark:text-slate-500 py-8">加载中...</p>
+              </div>
+            )}
+            {SSR_GROUPED[k]?.length ? (
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {SSR_GROUPED[k].map((g: any) => (
+                  <div class="group relative overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                    <div class="aspect-[4/3] overflow-hidden">
+                      <img src={g.image_url} alt={g.title || '工厂图片'} class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy"/>
+                    </div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div class="absolute bottom-0 left-0 right-0 p-4 text-white">
+                        {g.title && <h3 class="text-lg font-semibold mb-0.5">{g.title}</h3>}
+                        {g.description && <p class="text-sm text-white/80">{g.description}</p>}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : null}
           </div>
         ))}
       </div>
@@ -153,12 +163,8 @@ const hasSSRData = SSR_GALLERY.length > 0;
           </div>
         </div>
         <div id="tab-product-show" class="tab-content hidden">
-          <div class="flex flex-col items-center justify-center py-16 text-center rounded-2xl bg-muted/5 dark:bg-muted/10">
-            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 text-primary mb-6">
-              <Icon name="tabler:box" class="w-10 h-10"/>
-            </div>
-            <p class="text-lg font-medium text-muted dark:text-slate-400 mb-2">暂无产品实拍</p>
-            <p class="text-sm text-muted dark:text-slate-500">上传工厂实拍产品图后会展示在这里</p>
+          <div data-product-carousel>
+            <p class="text-center text-sm text-muted dark:text-slate-500 py-8">加载中...</p>
           </div>
         </div>
         <div id="tab-team" class="tab-content hidden">
@@ -182,67 +188,266 @@ const hasSSRData = SSR_GALLERY.length > 0;
   />
 </Layout>
 
+<style is:global>
+  /* 产品实拍轮播 */
+  .pc-root {
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+  .pc-stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: 1rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  }
+  .pc-slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.7s ease;
+  }
+  .pc-slide.is-active {
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 2;
+  }
+  .pc-slide img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .pc-mask {
+    position: absolute;
+    inset: 0;
+    display: block;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.15) 55%, rgba(0, 0, 0, 0) 100%);
+  }
+  .pc-cap {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: block;
+    padding: 1.25rem 1.5rem;
+    color: #fff;
+  }
+  .pc-cat {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 9999px;
+    background: var(--aw-color-primary, #2563eb);
+    color: #fff;
+  }
+  .pc-title {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem;
+  }
+  .pc-desc {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0 0 0.5rem;
+  }
+  .pc-link {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #fff;
+  }
+  .pc-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 3;
+    width: 2.25rem;
+    height: 2.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 9999px;
+    cursor: pointer;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(4px);
+  }
+  .pc-nav:hover {
+    background: rgba(255, 255, 255, 0.55);
+  }
+  .pc-prev {
+    left: 0.5rem;
+  }
+  .pc-next {
+    right: 0.5rem;
+  }
+  .pc-dots {
+    position: absolute;
+    bottom: 0.6rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    display: flex;
+    gap: 0.35rem;
+  }
+  .pc-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    padding: 0;
+    border: none;
+    border-radius: 9999px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.5);
+  }
+  .pc-dot.is-active {
+    background: #fff;
+    transform: scale(1.3);
+  }
+</style>
+
 <script define:vars={{ SSR_GALLERY }}>
   import { publicApi } from '/src/lib/api.ts';
   import { bindTabs } from '/src/lib/ui.ts';
 
+  const TAB_ORDER = ['factory', 'equipment', 'product-show', 'team'];
+  const LABEL: Record<string, string> = { factory: '工厂环境', equipment: '设备展示', 'product-show': '产品实拍', team: '团队风采' };
+  const ICON: Record<string, string> = { factory: 'building-factory', equipment: 'photo', 'product-show': 'box', team: 'users' };
+
+  // 全局单例定时器，避免 tab 重渲染时旧轮播的定时器泄漏
+  let pcTimer: any;
+  const stopPcTimer = () => { if (pcTimer) { clearInterval(pcTimer); pcTimer = null; } };
+
+  const esc = (s: any) =>
+    String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+
+  function galleryGridHTML(items: any[]) {
+    return `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      ${items.map((g) => `
+        <div class="group relative overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+          <div class="aspect-[4/3] overflow-hidden">
+            <img src="${esc(g.image_url)}" alt="${esc(g.title || '工厂图片')}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy"/>
+          </div>
+          <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <div class="absolute bottom-0 left-0 right-0 p-4 text-white">
+              ${g.title ? `<h3 class="text-lg font-semibold mb-0.5">${esc(g.title)}</h3>` : ''}
+              ${g.description ? `<p class="text-sm text-white/80">${esc(g.description)}</p>` : ''}
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }
+
   function renderGalleryTabs(list: any[]) {
     const tabs = document.getElementById('tabs')!;
     const by: Record<string, any[]> = {};
-    const order = ['factory', 'equipment', 'product-show', 'team'];
     for (const it of list) {
       const k = it.category || 'factory';
       (by[k] ||= []).push(it);
     }
-    const have = order.filter((k) => by[k]?.length);
-    if (!have.length) {
-      tabs.innerHTML = `<div class="rounded-2xl bg-muted/5 dark:bg-muted/10 p-10 text-center">
-        <div class="text-4xl mb-3">🏭</div>
-        <p class="font-medium">暂无工厂实拍图片</p>
-        <p class="text-sm text-muted mt-1">管理员在后台上传后，会实时展示在这里</p>
-      </div>`;
-      return;
-    }
-    const LABEL: Record<string, string> = { factory: '工厂环境', equipment: '设备展示', 'product-show': '产品实拍', team: '团队风采' };
-    const ICON: Record<string, string> = { factory: 'building-factory', equipment: 'photo', 'product-show': 'box', team: 'users' };
+    // 产品实拍 tab 始终展示（用于承载产品轮播）
+    const have = TAB_ORDER.filter((k) => by[k]?.length || k === 'product-show');
     tabs.innerHTML = `
       <div class="flex justify-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-800 flex-wrap">
         ${have.map((k, i) => `
           <button class="tab-btn px-6 py-3 text-base font-semibold border-b-2 transition-colors ${i === 0 ? 'border-primary text-primary' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-primary'}" data-tab="${k}">
             <span class="i-tabler-${ICON[k]} w-5 h-5 inline-block mr-1.5 -mt-0.5"></span>
             <span>${LABEL[k]}</span>
-            <span class="ml-1 text-xs opacity-60">(${by[k].length})</span>
-          </button>
-        `).join('')}
+            ${by[k]?.length ? `<span class="ml-1 text-xs opacity-60">(${by[k].length})</span>` : ''}
+          </button>`).join('')}
       </div>
       ${have.map((k, i) => `
         <div id="tab-${k}" class="tab-content ${i !== 0 ? 'hidden' : ''}">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            ${by[k].map((g) => `
-              <div class="group relative overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-                <div class="aspect-[4/3] overflow-hidden">
-                  <img src="${g.image_url}" alt="${g.title || '工厂图片'}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy"/>
-                </div>
-                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div class="absolute bottom-0 left-0 right-0 p-4 text-white">
-                    ${g.title ? `<h3 class="text-lg font-semibold mb-0.5">${g.title}</h3>` : ''}
-                    ${g.description ? `<p class="text-sm text-white/80">${g.description}</p>` : ''}
-                  </div>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `).join('')}
+          ${k === 'product-show' ? '<div data-product-carousel><p class="text-center text-sm text-muted dark:text-slate-500 py-8">加载中...</p></div>' : ''}
+          ${by[k]?.length ? galleryGridHTML(by[k]) : ''}
+        </div>`).join('')}
     `;
     bindTabs(tabs);
+    initProductCarousel();
   }
 
-  // 初始绑 SSR 兜底的 tabs
+  function renderProductCarousel(mount: Element, items: any[]) {
+    stopPcTimer();
+    if (!items.length) {
+      mount.innerHTML = '<p class="text-center text-sm text-muted dark:text-slate-500 py-8">暂无产品，去管理端添加产品后即可展示轮播</p>';
+      return;
+    }
+    const total = items.length;
+    const slidesHTML = items.map((p, i) => {
+      const name = p.name || p.product_name || '';
+      const cat = p.category_name || '';
+      const desc = p.description || p.product_description || '';
+      return `<a class="pc-slide ${i === 0 ? 'is-active' : ''}" href="/product?id=${p.id}" aria-hidden="${i !== 0}">
+        <img src="${esc(p.image_url || '')}" alt="${esc(name)}" loading="${i === 0 ? 'eager' : 'lazy'}"/>
+        <span class="pc-mask"></span>
+        <span class="pc-cap">
+          ${cat ? `<span class="pc-cat">${esc(cat)}</span>` : ''}
+          ${name ? `<span class="pc-title">${esc(name)}</span>` : ''}
+          ${desc ? `<span class="pc-desc">${esc(desc)}</span>` : ''}
+          <span class="pc-link">查看详情 →</span>
+        </span>
+      </a>`;
+    }).join('');
+    const dotsHTML = items.map((_, i) => `<button type="button" class="pc-dot ${i === 0 ? 'is-active' : ''}" data-dot="${i}" aria-label="第 ${i + 1} 张"></button>`).join('');
+    mount.innerHTML = `
+      <div class="pc-root" data-pc>
+        <div class="pc-stage">${slidesHTML}</div>
+        ${total > 1 ? `
+          <button type="button" class="pc-nav pc-prev" data-pc-prev aria-label="上一张">&lsaquo;</button>
+          <button type="button" class="pc-nav pc-next" data-pc-next aria-label="下一张">&rsaquo;</button>
+          <div class="pc-dots">${dotsHTML}</div>` : ''}
+      </div>`;
+
+    const root = mount.querySelector('[data-pc]') as HTMLElement | null;
+    if (!root) return;
+    const slides = root.querySelectorAll<HTMLElement>('.pc-slide');
+    const dots = root.querySelectorAll<HTMLElement>('.pc-dot');
+    let cur = 0;
+    const show = (i: number) => {
+      cur = (i + total) % total;
+      slides.forEach((s, k) => {
+        s.classList.toggle('is-active', k === cur);
+        s.setAttribute('aria-hidden', String(k !== cur));
+      });
+      dots.forEach((d, k) => d.classList.toggle('is-active', k === cur));
+    };
+    const start = () => { stopPcTimer(); if (total > 1) pcTimer = setInterval(() => show(cur + 1), 5000); };
+    root.addEventListener('mouseenter', stopPcTimer);
+    root.addEventListener('mouseleave', start);
+    root.querySelector('[data-pc-next]')?.addEventListener('click', () => { show(cur + 1); start(); });
+    root.querySelector('[data-pc-prev]')?.addEventListener('click', () => { show(cur - 1); start(); });
+    dots.forEach((d) => d.addEventListener('click', () => { show(parseInt(d.dataset.dot || '0', 10)); start(); }));
+    start();
+  }
+
+  async function initProductCarousel() {
+    const mount = document.querySelector('[data-product-carousel]');
+    if (!mount) return;
+    let items: any[] = [];
+    try {
+      const r = await publicApi.carouselList(10);
+      if (r.ok && Array.isArray(r.data)) items = r.data;
+    } catch (_) { /* 保留空态 */ }
+    renderProductCarousel(mount, items);
+  }
+
+  // 初始绑 SSR 兜底的 tabs + 填充产品轮播
   const initialTabsEl = document.getElementById('tabs');
   if (initialTabsEl) bindTabs(initialTabsEl);
+  initProductCarousel();
 
-  // 异步拉真实数据
+  // 异步拉真实相册数据
   (async () => {
     try {
       const r = await publicApi.galleryList({ activeOnly: true });

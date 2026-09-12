@@ -1,7 +1,6 @@
 import type {
   Product, ProductForm,
   Category, CategoryForm,
-  Banner, BannerForm,
   GalleryImage, GalleryImageForm,
   Inquiry, InquiryForm, InquiryReplyForm,
 } from './types';
@@ -67,8 +66,8 @@ export async function createProduct(db: D1Database, form: ProductForm) {
     .prepare(
       `INSERT INTO products
          (category_id, image_url, product_name, product_description,
-          product_parameters, product_tags, sort_order, is_active, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          product_parameters, product_tags, sort_order, is_active, carousel_fixed, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       form.category_id ?? null,
@@ -79,6 +78,7 @@ export async function createProduct(db: D1Database, form: ProductForm) {
       form.product_tags ? JSON.stringify(form.product_tags) : null,
       form.sort_order ?? 0,
       toBool(form.is_active),
+      form.carousel_fixed ? 1 : 0,
       ts
     )
     .run();
@@ -99,6 +99,7 @@ export async function updateProduct(db: D1Database, id: number, form: ProductFor
          product_tags         = COALESCE(?, product_tags),
          sort_order           = COALESCE(?, sort_order),
          is_active            = COALESCE(?, is_active),
+         carousel_fixed       = COALESCE(?, carousel_fixed),
          updated_at           = ?
        WHERE id = ?`
     )
@@ -111,6 +112,7 @@ export async function updateProduct(db: D1Database, id: number, form: ProductFor
       form.product_tags ? JSON.stringify(form.product_tags) : null,
       form.sort_order ?? null,
       form.is_active === undefined ? null : toBool(form.is_active),
+      form.carousel_fixed === undefined ? null : toBool(form.carousel_fixed),
       now(),
       id
     )
@@ -129,6 +131,38 @@ export async function toggleProductActive(db: D1Database, id: number) {
     .bind(now(), id)
     .run();
   return r.changes > 0;
+}
+
+export async function toggleProductCarousel(db: D1Database, id: number) {
+  const r = await db
+    .prepare('UPDATE products SET carousel_fixed = CASE WHEN carousel_fixed=1 THEN 0 ELSE 1 END, updated_at=? WHERE id = ?')
+    .bind(now(), id)
+    .run();
+  return r.changes > 0;
+}
+
+/**
+ * 产品实拍轮播：优先取「固定轮播」的上架产品（按 sort_order），
+ * 不足 limit 时用其余上架产品随机补足。
+ */
+export async function listCarouselProducts(db: D1Database, limit = 10) {
+  const fixed = (
+    await db
+      .prepare('SELECT * FROM products WHERE is_active=1 AND carousel_fixed=1 ORDER BY sort_order ASC, id DESC LIMIT ?')
+      .bind(limit)
+      .all<Product>()
+  ).results;
+
+  if (fixed.length >= limit) return fixed;
+
+  const excludeIds = fixed.map((p) => p.id).filter((id): id is number => typeof id === 'number');
+  const remaining = limit - fixed.length;
+  const placeholders = excludeIds.map(() => '?').join(',');
+  const sql = `SELECT * FROM products WHERE is_active=1${excludeIds.length ? ` AND id NOT IN (${placeholders})` : ''} ORDER BY RANDOM() LIMIT ?`;
+  const params = excludeIds.length ? [...excludeIds, remaining] : [remaining];
+  const random = (await db.prepare(sql).bind(...params).all<Product>()).results;
+
+  return [...fixed, ...random];
 }
 
 export async function countProducts(db: D1Database) {
@@ -186,84 +220,6 @@ export async function updateCategory(db: D1Database, id: number, form: CategoryF
 }
 export async function deleteCategory(db: D1Database, id: number) {
   const r = await db.prepare('DELETE FROM categories WHERE id=?').bind(id).run();
-  return r.changes > 0;
-}
-
-// ============================================================
-// Banner
-// ============================================================
-export async function listBanners(
-  db: D1Database,
-  opts: { activeOnly?: boolean; lang?: string } = {}
-) {
-  const where: string[] = [];
-  const params: any[] = [];
-  if (opts.activeOnly) where.push('is_active = 1');
-  if (opts.lang) {
-    where.push('(lang = ? OR lang = ?)');
-    params.push(opts.lang, 'all');
-  }
-  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
-  return (
-    await db
-      .prepare(`SELECT * FROM banners ${whereSql} ORDER BY sort_order ASC, id DESC`)
-      .bind(...params)
-      .all<Banner>()
-  ).results;
-}
-export async function getBanner(db: D1Database, id: number) {
-  return (await db.prepare('SELECT * FROM banners WHERE id=?').bind(id).first<Banner>()) || null;
-}
-export async function createBanner(db: D1Database, form: BannerForm) {
-  const r = await db
-    .prepare(
-      `INSERT INTO banners (image_url, title, subtitle, link_url, lang, sort_order, is_active, created_at) VALUES (?,?,?,?,?,?,?,?)`
-    )
-    .bind(
-      form.image_url,
-      form.title ?? null,
-      form.subtitle ?? null,
-      form.link_url ?? null,
-      form.lang ?? 'zh',
-      form.sort_order ?? 0,
-      toBool(form.is_active),
-      now()
-    )
-    .run();
-  return r.lastRowId;
-}
-export async function updateBanner(db: D1Database, id: number, form: BannerForm) {
-  const e = await getBanner(db, id);
-  if (!e) return false;
-  await db
-    .prepare(
-      `UPDATE banners SET
-         image_url  = COALESCE(?, image_url),
-         title      = COALESCE(?, title),
-         subtitle   = COALESCE(?, subtitle),
-         link_url   = COALESCE(?, link_url),
-         lang       = COALESCE(?, lang),
-         sort_order = COALESCE(?, sort_order),
-         is_active  = COALESCE(?, is_active),
-         updated_at = ?
-       WHERE id = ?`
-    )
-    .bind(
-      form.image_url || null,
-      form.title ?? null,
-      form.subtitle ?? null,
-      form.link_url ?? null,
-      form.lang ?? null,
-      form.sort_order ?? null,
-      form.is_active === undefined ? null : toBool(form.is_active),
-      now(),
-      id
-    )
-    .run();
-  return true;
-}
-export async function deleteBanner(db: D1Database, id: number) {
-  const r = await db.prepare('DELETE FROM banners WHERE id=?').bind(id).run();
   return r.changes > 0;
 }
 

@@ -1,15 +1,14 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
 import type {
-  ProductForm, CategoryForm, BannerForm, GalleryImageForm, InquiryReplyForm,
+  ProductForm, CategoryForm, GalleryImageForm, InquiryReplyForm,
 } from '../types';
 import {
   // 产品
   listProducts, getProduct, createProduct, updateProduct, deleteProduct, toggleProductActive,
+  toggleProductCarousel,
   // 分类
   listCategories, getCategory, createCategory, updateCategory, deleteCategory,
-  // Banner
-  listBanners, getBanner, createBanner, updateBanner, deleteBanner,
   // 相册
   listGallery, getGalleryImage, createGalleryImage, updateGalleryImage, deleteGalleryImage,
   // 询盘
@@ -87,6 +86,12 @@ adminRoute.patch('/products/:id/toggle', async (c) => {
   if (!ok) return c.json({ error: 'Not found' }, 404);
   return c.json({ message: 'Status toggled' });
 });
+adminRoute.patch('/products/:id/carousel', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const ok = await toggleProductCarousel(c.env.DB, id);
+  if (!ok) return c.json({ error: 'Not found' }, 404);
+  return c.json({ message: 'Carousel flag toggled' });
+});
 
 // ============================================================
 // 分类管理
@@ -119,39 +124,6 @@ adminRoute.delete('/categories/:id', async (c) => {
   const ok = await deleteCategory(c.env.DB, id);
   if (!ok) return c.json({ error: 'Not found' }, 404);
   return c.json({ message: 'Category deleted' });
-});
-
-// ============================================================
-// Banner 管理
-// ============================================================
-adminRoute.get('/banners', async (c) => {
-  const list = await listBanners(c.env.DB);
-  return c.json({ data: list });
-});
-adminRoute.get('/banners/:id', async (c) => {
-  const id = parseInt(c.req.param('id'));
-  const e = await getBanner(c.env.DB, id);
-  if (!e) return c.json({ error: 'Not found' }, 404);
-  return c.json({ data: e });
-});
-adminRoute.post('/banners', async (c) => {
-  const form = (await c.req.json()) as BannerForm;
-  if (!form.image_url) return c.json({ error: 'image_url 必填' }, 400);
-  const id = await createBanner(c.env.DB, form);
-  return c.json({ data: { id, ...form }, message: 'Banner created' }, 201);
-});
-adminRoute.put('/banners/:id', async (c) => {
-  const id = parseInt(c.req.param('id'));
-  const form = (await c.req.json()) as BannerForm;
-  const ok = await updateBanner(c.env.DB, id, form);
-  if (!ok) return c.json({ error: 'Not found' }, 404);
-  return c.json({ message: 'Banner updated' });
-});
-adminRoute.delete('/banners/:id', async (c) => {
-  const id = parseInt(c.req.param('id'));
-  const ok = await deleteBanner(c.env.DB, id);
-  if (!ok) return c.json({ error: 'Not found' }, 404);
-  return c.json({ message: 'Banner deleted' });
 });
 
 // ============================================================

@@ -70,9 +70,6 @@ const App = {
             <span>📊</span><span>仪表盘</span>
           </a>
           <div class="mt-3 text-gray-500 uppercase text-xs tracking-wider px-3">内容</div>
-          <a href="banners.html" class="flex items-center gap-3 px-3 py-2 rounded-lg transition ${activePage === 'banners' ? 'bg-blue-600' : 'hover:bg-gray-800'}">
-            <span>🖼️</span><span>首页 Banner</span>
-          </a>
           <a href="categories.html" class="flex items-center gap-3 px-3 py-2 rounded-lg transition ${activePage === 'categories' ? 'bg-blue-600' : 'hover:bg-gray-800'}">
             <span>🗂️</span><span>产品分类</span>
           </a>

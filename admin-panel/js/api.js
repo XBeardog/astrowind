@@ -59,6 +59,7 @@ const API = {
     update: (id, data) => API.request(`/api/admin/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id) => API.request(`/api/admin/products/${id}`, { method: 'DELETE' }),
     toggle: (id) => API.request(`/api/admin/products/${id}/toggle`, { method: 'PATCH' }),
+    carouselToggle: (id) => API.request(`/api/admin/products/${id}/carousel`, { method: 'PATCH' }),
   },
 
   // -------------------- 分类 --------------------
@@ -68,15 +69,6 @@ const API = {
     create: (data) => API.request('/api/admin/categories', { method: 'POST', body: JSON.stringify(data) }),
     update: (id, data) => API.request(`/api/admin/categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id) => API.request(`/api/admin/categories/${id}`, { method: 'DELETE' }),
-  },
-
-  // -------------------- Banner --------------------
-  banners: {
-    list: () => API.request('/api/admin/banners'),
-    get: (id) => API.request(`/api/admin/banners/${id}`),
-    create: (data) => API.request('/api/admin/banners', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => API.request(`/api/admin/banners/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => API.request(`/api/admin/banners/${id}`, { method: 'DELETE' }),
   },
 
   // -------------------- 工厂相册 --------------------
@@ -127,8 +119,8 @@ const API = {
     },
     product: (id) => API.request(`/api/products/${id}`),
     categories: () => API.request('/api/products/categories/list'),
-    banners: (lang) =>
-      API.request('/api/products/banners/list' + (lang ? `?lang=${lang}` : '')),
+    carousel: (limit = 10) =>
+      API.request(`/api/products/carousel/list?limit=${limit}`),
     gallery: (params = {}) => {
       const query = new URLSearchParams(params).toString();
       return API.request(`/api/products/gallery/list${query ? '?' + query : ''}`);

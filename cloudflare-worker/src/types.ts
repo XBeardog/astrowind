@@ -13,6 +13,7 @@ export type Product = {
   updated_at?: string;
   sort_order?: number;
   is_active?: number;
+  carousel_fixed?: number;            // 1=固定出现在产品实拍轮播
 };
 
 export type ProductForm = {
@@ -25,6 +26,7 @@ export type ProductForm = {
   product_tags?: string[];                       // 前端传来的数组
   sort_order?: number;
   is_active?: boolean;
+  carousel_fixed?: boolean;
 };
 
 // ============================================================
@@ -42,26 +44,6 @@ export type Category = {
 };
 
 export type CategoryForm = Omit<Category, 'id' | 'created_at' | 'updated_at' | 'is_active'> & {
-  is_active?: boolean;
-};
-
-// ============================================================
-// 首页 Banner
-// ============================================================
-export type Banner = {
-  id?: number;
-  image_url: string;
-  title?: string;
-  subtitle?: string;
-  link_url?: string;
-  lang?: string;                     // 'zh' | 'en' | 'all'
-  sort_order?: number;
-  is_active?: number;
-  created_at?: string;
-  updated_at?: string;
-};
-
-export type BannerForm = Omit<Banner, 'id' | 'created_at' | 'updated_at' | 'is_active'> & {
   is_active?: boolean;
 };
 

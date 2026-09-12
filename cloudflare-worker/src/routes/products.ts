@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
 import {
-  listProducts, getProduct, listCategories, listBanners, listGallery, createInquiry,
+  listProducts, getProduct, listCategories, listCarouselProducts, listGallery, createInquiry,
 } from '../db';
 import type { Category, InquiryForm, Product } from '../types';
 
@@ -102,16 +102,18 @@ productsRoute.get('/:id', async (c) => {
   return c.json({ data: publicProductView(p as any, catMap) });
 });
 
+// ---------- 产品实拍轮播（公开）：固定轮播优先，不足 limit 随机补足 ----------
+productsRoute.get('/carousel/list', async (c) => {
+  const { limit } = c.req.query();
+  const lim = Math.min(Math.max(parseInt(limit || '10') || 10, 1), 50);
+  const list = await listCarouselProducts(c.env.DB, lim);
+  const catMap = await loadCatMap(c.env.DB);
+  return c.json({ data: list.map((p) => publicProductView(p as any, catMap)) });
+});
+
 // ---------- 分类（公开）----------
 productsRoute.get('/categories/list', async (c) => {
   const list = await listCategories(c.env.DB, { activeOnly: true });
-  return c.json({ data: list });
-});
-
-// ---------- Banner（公开）----------
-productsRoute.get('/banners/list', async (c) => {
-  const { lang } = c.req.query();
-  const list = await listBanners(c.env.DB, { activeOnly: true, lang });
   return c.json({ data: list });
 });
 

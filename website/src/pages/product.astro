@@ -1,0 +1,99 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import Hero from '~/components/widgets/Hero.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import CallToAction from '~/components/widgets/CallToAction.astro';
+
+const metadata = {
+  title: '产品详情',
+  description: '查看产品详细信息，支持在线询价，模塑一体化源头工厂一站式交付。',
+};
+---
+
+<Layout metadata={metadata}>
+  <Hero tagline="Products" title="产品详情" compact i18n={{ title: 'products.hero.title' }} />
+
+  <WidgetWrapper containerClass="max-w-5xl mx-auto !py-4">
+    <div id="product-detail" class="min-h-[300px]">
+      <p class="text-center text-muted dark:text-slate-400 py-16">加载中...</p>
+    </div>
+  </WidgetWrapper>
+
+  <CallToAction
+    tagline="下一页"
+    title="需要开模或注塑量产？"
+    subtitle="把需求交给我们，从模具设计到注塑成品一站式完成"
+    actions={[
+      { variant: 'primary', text: '联系我们', href: '/contact', icon: 'tabler:arrow-right' },
+    ]}
+  />
+</Layout>
+
+<script>
+  import { publicApi } from '/src/lib/api.ts';
+
+  const esc = (s: any) =>
+    String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+
+  function renderNotFound(message: string) {
+    const el = document.getElementById('product-detail');
+    if (!el) return;
+    el.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-16 text-center rounded-2xl bg-muted/5 dark:bg-muted/10">
+        <div class="text-5xl mb-3">📦</div>
+        <p class="font-medium text-gray-700 dark:text-slate-200">${esc(message)}</p>
+        <a href="/products" class="mt-4 inline-flex items-center px-5 py-2.5 rounded-lg bg-primary text-white font-medium hover:opacity-90 transition">返回产品中心</a>
+      </div>`;
+  }
+
+  function renderProduct(p: any) {
+    const el = document.getElementById('product-detail');
+    if (!el) return;
+    const name = p.name || p.product_name || '';
+    const cat = p.category_name || '';
+    const desc = p.description || p.product_description || '';
+    const tags: string[] = Array.isArray(p.tags) ? p.tags : [];
+    const specs: Record<string, any> = p.specs && typeof p.specs === 'object' ? p.specs : {};
+    const specRows = Object.entries(specs)
+      .map(([k, v]) => `<div class="flex gap-3 py-2 border-b border-gray-100 dark:border-slate-800 last:border-0"><span class="w-28 flex-shrink-0 text-sm text-gray-500 dark:text-slate-400">${esc(k)}</span><span class="text-sm text-gray-900 dark:text-slate-100">${esc(v)}</span></div>`)
+      .join('');
+    const contactHref = p.id ? `/contact#form?product_id=${p.id}` : '/contact';
+
+    el.innerHTML = `
+      <a href="/products" class="inline-flex items-center gap-1 text-sm text-muted dark:text-slate-400 hover:text-primary transition mb-4">← 返回产品中心</a>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div class="aspect-[4/3] md:aspect-auto md:h-full bg-gray-100 dark:bg-slate-800">
+          <img src="${esc(p.image_url || '')}" alt="${esc(name)}" class="w-full h-full object-cover"/>
+        </div>
+        <div class="p-6 flex flex-col">
+          ${cat ? `<span class="inline-flex self-start items-center px-3 py-1 rounded-full text-xs font-semibold bg-primary text-white mb-3">${esc(cat)}</span>` : ''}
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">${esc(name)}</h1>
+          ${desc ? `<p class="text-sm text-gray-600 dark:text-slate-300 leading-relaxed mb-4">${esc(desc)}</p>` : ''}
+          ${tags.length ? `<div class="flex flex-wrap gap-1.5 mb-4">${tags.map((t) => `<span class="inline-block px-2 py-0.5 text-xs rounded-md bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300">${esc(t)}</span>`).join('')}</div>` : ''}
+          ${specRows ? `<div class="mb-5">${specRows}</div>` : ''}
+          <div class="mt-auto flex flex-wrap gap-3">
+            <a href="${contactHref}" class="inline-flex items-center px-5 py-2.5 rounded-lg bg-primary text-white font-medium hover:opacity-90 transition">立即询价</a>
+            <a href="/products" class="inline-flex items-center px-5 py-2.5 rounded-lg border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition">查看更多产品</a>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  (async () => {
+    const id = new URLSearchParams(window.location.search).get('id');
+    if (!id) {
+      renderNotFound('未指定产品');
+      return;
+    }
+    try {
+      const r = await publicApi.product(id);
+      if (r.ok && r.data && (r.data as any).id) {
+        renderProduct(r.data);
+      } else {
+        renderNotFound('未找到该产品');
+      }
+    } catch (_) {
+      renderNotFound('加载失败，请稍后重试');
+    }
+  })();
+</script>

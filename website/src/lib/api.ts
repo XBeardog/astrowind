@@ -95,17 +95,6 @@ export interface Category {
   is_active?: 0 | 1;
 }
 
-export interface Banner {
-  id: number;
-  image_url: string;
-  title?: string;
-  subtitle?: string;
-  link_url?: string;
-  sort_order: number;
-  lang?: 'zh' | 'en' | 'all';
-  is_active?: 0 | 1;
-}
-
 export interface GalleryImage {
   id: number;
   image_url: string;
@@ -127,12 +116,12 @@ export const publicApi = {
     return apiFetch<Product[]>(`/api/products/list${q.toString() ? '?' + q : ''}`);
   },
 
+  product: (id: number | string) => apiFetch<Product>(`/api/products/${id}`),
+
   categoriesList: () => apiFetch<Category[]>('/api/products/categories/list'),
 
-  bannersList: (lang?: 'zh' | 'en' | 'all') => {
-    const q = lang ? `?lang=${lang}` : '';
-    return apiFetch<Banner[]>(`/api/products/banners/list${q}`);
-  },
+  // 产品实拍轮播：固定轮播优先，不足 limit 随机补足
+  carouselList: (limit = 10) => apiFetch<Product[]>(`/api/products/carousel/list?limit=${limit}`),
 
   galleryList: (opts?: { category?: string; activeOnly?: boolean }) => {
     const q = new URLSearchParams();

@@ -54,6 +54,7 @@
                   <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">标签</th>
                   <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
                   <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">排序</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">产品实拍轮播</th>
                   <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
                 </tr>
               </thead>
@@ -92,7 +93,7 @@
         if (products.length === 0) {
           tbody.innerHTML = `
             <tr>
-              <td colspan="7" class="px-4 py-12 text-center text-gray-500">
+              <td colspan="8" class="px-4 py-12 text-center text-gray-500">
                 <div class="text-4xl mb-2">📦</div>
                 <p>暂无产品数据</p>
                 <a href="product-form.html" class="text-blue-600 hover:underline mt-2 inline-block">立即添加</a>
@@ -122,10 +123,19 @@
             </td>
             <td class="px-4 py-3 text-sm text-gray-500">${p.sort_order || 0}</td>
             <td class="px-4 py-3">
+              ${p.carousel_fixed
+                ? '<span class="px-2 py-1 bg-pink-100 text-pink-700 rounded text-xs">固定轮播</span>'
+                : '<span class="text-xs text-gray-400">随机补位</span>'
+              }
+            </td>
+            <td class="px-4 py-3">
               <div class="flex gap-2">
                 <button onclick="editProduct(${p.id})" class="text-blue-600 hover:underline text-sm">编辑</button>
                 <button onclick="toggleProduct(${p.id}, ${p.is_active})" class="text-orange-600 hover:underline text-sm">
                   ${p.is_active ? '下架' : '上架'}
+                </button>
+                <button onclick="toggleCarousel(${p.id})" class="text-pink-600 hover:underline text-sm">
+                  ${p.carousel_fixed ? '取消固定' : '固定轮播'}
                 </button>
                 <button onclick="deleteProduct(${p.id})" class="text-red-600 hover:underline text-sm">删除</button>
               </div>
@@ -149,6 +159,16 @@
       try {
         await API.products.toggle(id);
         App.toast(`已${action}`, 'success');
+        loadProducts();
+      } catch (err) {
+        App.toast('操作失败: ' + err.message, 'error');
+      }
+    }
+
+    async function toggleCarousel(id) {
+      try {
+        await API.products.carouselToggle(id);
+        App.toast('已更新轮播设置', 'success');
         loadProducts();
       } catch (err) {
         App.toast('操作失败: ' + err.message, 'error');
