@@ -25,7 +25,9 @@ const API = {
 
     const response = await fetch(url, { ...options, headers });
 
-    if (response.status === 401) {
+    // 仅当请求携带 token 时才把 401 视为会话过期并跳回登录页；
+    // 登录等未携带 token 的请求应正常抛错，交由调用方展示错误信息。
+    if (response.status === 401 && token) {
       Auth.logout();
       window.location.href = 'index.html';
       return;
